@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://yorhaha.github.io/stock-watch/sitemap.xml
