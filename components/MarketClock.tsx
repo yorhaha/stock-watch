@@ -18,21 +18,20 @@ export function MarketClock({ session }: MarketClockProps) {
     return () => window.clearInterval(timer);
   }, []);
 
-  const live = session.isTrading;
-  const active = live || session.isAuction;
+  const active = session.isTrading || session.isAuction;
 
   return (
-    <div className="market-clock">
-      <span className="market-clock-time" role="timer" aria-label={`上海时间 ${clock}`}>
+    <div className="market-clock" data-market-phase={session.phase}>
+      <span
+        className="market-clock-time"
+        role="timer"
+        aria-label={`上海时间 ${clock}，${session.label}`}
+      >
         {clock}
       </span>
       <span className="market-state">
-        <i className={`status-dot ${active ? "is-active" : ""} ${live ? "is-trading" : ""}`} />
+        <i className={`status-dot ${active ? "is-active" : ""} ${session.isTrading ? "is-trading" : ""}`} />
         <span>{session.label}</span>
-        <span className="state-divider" />
-        <span>
-          {session.dateLabel} {session.weekday}
-        </span>
       </span>
     </div>
   );

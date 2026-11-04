@@ -1,37 +1,45 @@
-import type { Exchange, SessionInfo, StockRef } from "./types";
+import type { SessionInfo, StockRef } from "./types";
 
 export const MARKET_TIME_ZONE = "Asia/Shanghai";
 
 export const DEFAULT_STOCKS: StockRef[] = [
-  { secid: "1.600519", code: "600519", name: "贵州茅台", exchange: "SH" },
-  { secid: "0.300750", code: "300750", name: "宁德时代", exchange: "SZ" },
-  { secid: "0.002594", code: "002594", name: "比亚迪", exchange: "SZ" },
-  { secid: "1.688981", code: "688981", name: "中芯国际", exchange: "SH" },
-  { secid: "0.300059", code: "300059", name: "东方财富", exchange: "SZ" },
-  { secid: "1.688256", code: "688256", name: "寒武纪", exchange: "SH" },
-  { secid: "1.600036", code: "600036", name: "招商银行", exchange: "SH" },
-  { secid: "1.601318", code: "601318", name: "中国平安", exchange: "SH" },
+  { secid: "1.600519", code: "600519", name: "贵州茅台" },
+  { secid: "0.300750", code: "300750", name: "宁德时代" },
+  { secid: "0.002594", code: "002594", name: "比亚迪" },
+  { secid: "1.688981", code: "688981", name: "中芯国际" },
+  { secid: "0.300059", code: "300059", name: "东方财富" },
+  { secid: "1.688256", code: "688256", name: "寒武纪" },
+  { secid: "1.600036", code: "600036", name: "招商银行" },
+  { secid: "1.601318", code: "601318", name: "中国平安" },
+  { secid: "1.600900", code: "600900", name: "长江电力" },
+  { secid: "1.601899", code: "601899", name: "紫金矿业" },
+  { secid: "0.000858", code: "000858", name: "五粮液" },
+  { secid: "0.000333", code: "000333", name: "美的集团" },
+  { secid: "0.002475", code: "002475", name: "立讯精密" },
+  { secid: "0.300308", code: "300308", name: "中际旭创" },
+  { secid: "1.600276", code: "600276", name: "恒瑞医药" },
+  { secid: "1.600030", code: "600030", name: "中信证券" },
 ];
 
 export const MARKET_INDICES: StockRef[] = [
-  { secid: "1.000001", code: "000001", name: "上证指数", exchange: "SH" },
-  { secid: "0.399001", code: "399001", name: "深证成指", exchange: "SZ" },
-  { secid: "0.399006", code: "399006", name: "创业板指", exchange: "SZ" },
+  { secid: "1.000001", code: "000001", name: "上证指数" },
+  { secid: "0.399001", code: "399001", name: "深证成指" },
+  { secid: "0.399006", code: "399006", name: "创业板指" },
 ];
 
 export const POPULAR_STOCKS: StockRef[] = [
-  { secid: "1.600900", code: "600900", name: "长江电力", exchange: "SH" },
-  { secid: "1.601899", code: "601899", name: "紫金矿业", exchange: "SH" },
-  { secid: "0.000858", code: "000858", name: "五粮液", exchange: "SZ" },
-  { secid: "0.000333", code: "000333", name: "美的集团", exchange: "SZ" },
-  { secid: "0.002475", code: "002475", name: "立讯精密", exchange: "SZ" },
-  { secid: "0.300308", code: "300308", name: "中际旭创", exchange: "SZ" },
-  { secid: "1.600276", code: "600276", name: "恒瑞医药", exchange: "SH" },
-  { secid: "1.600030", code: "600030", name: "中信证券", exchange: "SH" },
-  { secid: "0.000001", code: "000001", name: "平安银行", exchange: "SZ" },
-  { secid: "1.601012", code: "601012", name: "隆基绿能", exchange: "SH" },
-  { secid: "0.002415", code: "002415", name: "海康威视", exchange: "SZ" },
-  { secid: "0.300502", code: "300502", name: "新易盛", exchange: "SZ" },
+  { secid: "1.600887", code: "600887", name: "伊利股份" },
+  { secid: "1.601166", code: "601166", name: "兴业银行" },
+  { secid: "0.000651", code: "000651", name: "格力电器" },
+  { secid: "0.002230", code: "002230", name: "科大讯飞" },
+  { secid: "0.300274", code: "300274", name: "阳光电源" },
+  { secid: "1.600309", code: "600309", name: "万华化学" },
+  { secid: "1.601088", code: "601088", name: "中国神华" },
+  { secid: "0.000725", code: "000725", name: "京东方A" },
+  { secid: "0.002714", code: "002714", name: "牧原股份" },
+  { secid: "0.300124", code: "300124", name: "汇川技术" },
+  { secid: "1.600031", code: "600031", name: "三一重工" },
+  { secid: "1.601728", code: "601728", name: "中国电信" },
 ];
 
 export const STORAGE_KEYS = {
@@ -43,6 +51,9 @@ export const DEFAULT_PREFERENCES = {
   theme: "auto" as const,
   colors: "cn" as const,
   refreshMs: 5000,
+  showPrice: true,
+  changeBackground: false,
+  layout: "single" as const,
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
@@ -198,18 +209,6 @@ export function toneOf(value: number | null | undefined): "up" | "down" | "flat"
   return value > 0 ? "up" : "down";
 }
 
-export function exchangeLabel(exchange: Exchange): string {
-  if (exchange === "SH") return "沪";
-  if (exchange === "BJ") return "京";
-  return "深";
-}
-
 export function isStockCode(code: string): boolean {
   return /^(60[0135]\d{3}|68[89]\d{3}|00[0123]\d{3}|30[01]\d{3}|920\d{3})$/.test(code);
-}
-
-export function normalizeSecid(secid: string): string | null {
-  const match = /^([01])\.(\d{6})$/.exec(secid);
-  if (!match || !isStockCode(match[2])) return null;
-  return `${match[1]}.${match[2]}`;
 }

@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_PREFERENCES, STORAGE_KEYS } from "@/lib/market";
-import type { ColorMode, Preferences, ThemeMode } from "@/lib/types";
-
-type ResolvedTheme = "light" | "dark";
+import type { ColorMode, LayoutMode, Preferences, ThemeMode } from "@/lib/types";
 
 function readPreferences(): Preferences {
   try {
@@ -20,6 +18,9 @@ function readPreferences(): Preferences {
       refreshMs: [3000, 5000, 10000].includes(Number(parsed.refreshMs))
         ? Number(parsed.refreshMs)
         : DEFAULT_PREFERENCES.refreshMs,
+      showPrice: parsed.showPrice !== false,
+      changeBackground: parsed.changeBackground === true,
+      layout: parsed.layout === "double" ? "double" : "single",
     };
   } catch {
     return DEFAULT_PREFERENCES;
@@ -28,19 +29,19 @@ function readPreferences(): Preferences {
 
 export function usePreferences() {
   const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
   const [ready, setReady] = useState(false);
 
   const applyTheme = useCallback((prefs: Preferences) => {
     const systemDark =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const resolved: ResolvedTheme =
-      prefs.theme === "auto" ? (systemDark ? "dark" : "light") : prefs.theme;
+    const resolved = prefs.theme === "auto" ? (systemDark ? "dark" : "light") : prefs.theme;
     document.documentElement.dataset.theme = resolved;
     document.documentElement.dataset.colors = prefs.colors;
+    document.documentElement.dataset.showPrice = prefs.showPrice ? "true" : "false";
+    document.documentElement.dataset.changeBg = prefs.changeBackground ? "true" : "false";
+    document.documentElement.dataset.layout = prefs.layout;
     document.documentElement.style.colorScheme = resolved;
-    setResolvedTheme(resolved);
   }, []);
 
   useEffect(() => {
@@ -80,20 +81,25 @@ export function usePreferences() {
     setPreferences((current) => ({ ...current, refreshMs }));
   }, []);
 
-  const toggleTheme = useCallback(() => {
-    setPreferences((current) => ({
-      ...current,
-      theme: resolvedTheme === "dark" ? "light" : "dark",
-    }));
-  }, [resolvedTheme]);
+  const setShowPrice = useCallback((showPrice: boolean) => {
+    setPreferences((current) => ({ ...current, showPrice }));
+  }, []);
+
+  const setChangeBackground = useCallback((changeBackground: boolean) => {
+    setPreferences((current) => ({ ...current, changeBackground }));
+  }, []);
+
+  const setLayout = useCallback((layout: LayoutMode) => {
+    setPreferences((current) => ({ ...current, layout }));
+  }, []);
 
   return {
     preferences,
-    resolvedTheme,
-    ready,
     setTheme,
     setColors,
     setRefreshMs,
-    toggleTheme,
+    setShowPrice,
+    setChangeBackground,
+    setLayout,
   };
 }

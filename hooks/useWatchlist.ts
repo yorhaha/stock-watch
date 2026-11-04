@@ -20,10 +20,6 @@ function sanitize(value: unknown): StockRef[] {
       secid,
       code,
       name: String(candidate.name ?? code),
-      exchange:
-        candidate.exchange === "SH" || candidate.exchange === "BJ"
-          ? candidate.exchange
-          : "SZ",
     });
     if (stocks.length >= 30) break;
   }
@@ -64,6 +60,7 @@ export function useWatchlist() {
   const insert = useCallback((stock: StockRef, index: number) => {
     setStocks((current) => {
       if (current.some((item) => item.secid === stock.secid)) return current;
+      if (current.length >= 30) return current;
       const next = [...current];
       next.splice(Math.max(0, Math.min(index, next.length)), 0, stock);
       return next;

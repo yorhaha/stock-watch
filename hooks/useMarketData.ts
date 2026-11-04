@@ -64,7 +64,13 @@ export function useMarketData(
       } catch (reason) {
         if (disposed || controller.signal.aborted) return;
         setStatus(hasData.current ? "stale" : "error");
-        setError(reason instanceof Error ? reason.message : "行情连接中断");
+        setError(
+          reason instanceof TypeError
+            ? "行情接口连接失败"
+            : reason instanceof Error
+              ? reason.message
+              : "行情连接中断",
+        );
       } finally {
         quoteBusy = false;
       }

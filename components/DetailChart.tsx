@@ -301,7 +301,6 @@ export function DetailChart({ trend, quote, name }: DetailChartProps) {
       ) : (
         <div className="detail-chart-placeholder">
           <span className="chart-skeleton-line" />
-          <span className="chart-skeleton-copy">正在载入分时数据</span>
         </div>
       )}
     </div>

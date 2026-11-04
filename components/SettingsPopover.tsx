@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { ColorMode, Preferences, ThemeMode } from "@/lib/types";
-import { CloseIcon } from "./Icons";
+import type { ColorMode, LayoutMode, Preferences, ThemeMode } from "@/lib/types";
 
 interface SettingsPopoverProps {
   open: boolean;
@@ -11,6 +10,9 @@ interface SettingsPopoverProps {
   onTheme: (theme: ThemeMode) => void;
   onColors: (colors: ColorMode) => void;
   onRefresh: (refreshMs: number) => void;
+  onShowPrice: (showPrice: boolean) => void;
+  onChangeBackground: (enabled: boolean) => void;
+  onLayout: (layout: LayoutMode) => void;
 }
 
 const themeOptions: { value: ThemeMode; label: string }[] = [
@@ -33,11 +35,16 @@ export function SettingsPopover({
   onTheme,
   onColors,
   onRefresh,
+  onShowPrice,
+  onChangeBackground,
+  onLayout,
 }: SettingsPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    previousFocus.current = document.activeElement as HTMLElement | null;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
       if (popoverRef.current?.contains(target)) return;
@@ -53,6 +60,7 @@ export function SettingsPopover({
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
+      if (previousFocus.current?.isConnected) previousFocus.current.focus();
     };
   }, [open, onClose]);
 
@@ -62,22 +70,12 @@ export function SettingsPopover({
     <div
       className="settings-popover"
       role="dialog"
-      aria-label="外观与行情设置"
+      aria-label="设置"
       ref={popoverRef}
     >
-      <div className="settings-head">
-        <span>设置</span>
-        <button type="button" className="icon-button compact" onClick={onClose} aria-label="关闭设置">
-          <CloseIcon size={14} />
-        </button>
-      </div>
-
       <div className="settings-row">
-        <div className="settings-copy">
-          <span className="settings-label">外观</span>
-          <span className="settings-hint">跟随系统，或固定主题</span>
-        </div>
-        <div className="segmented" role="group" aria-label="外观主题">
+        <span className="settings-label">主题</span>
+        <div className="segmented" role="group" aria-label="主题">
           {themeOptions.map((option) => (
             <button
               type="button"
@@ -93,30 +91,105 @@ export function SettingsPopover({
       </div>
 
       <div className="settings-row">
-        <div className="settings-copy">
-          <span className="settings-label">涨跌颜色</span>
-          <span className="settings-hint">按你的看盘习惯显示</span>
-        </div>
-        <div className="segmented wide" role="group" aria-label="涨跌颜色">
+        <span className="settings-label">涨跌</span>
+        <div className="segmented color-segmented" role="group" aria-label="涨跌颜色">
           {colorOptions.map((option) => (
             <button
               type="button"
               key={option.value}
               className={preferences.colors === option.value ? "is-selected" : ""}
+              aria-label={option.label}
               aria-pressed={preferences.colors === option.value}
               onClick={() => onColors(option.value)}
             >
-              {option.label}
+              <span className={`color-sample ${option.value}`} aria-hidden="true">
+                <span>↑</span>
+                <span>↓</span>
+              </span>
             </button>
           ))}
         </div>
       </div>
 
       <div className="settings-row">
-        <div className="settings-copy">
-          <span className="settings-label">刷新频率</span>
-          <span className="settings-hint">分时图约每 30 秒刷新</span>
+        <span className="settings-label">价格</span>
+        <div className="segmented" role="group" aria-label="价格显示">
+          <button
+            type="button"
+            className={preferences.showPrice ? "is-selected" : ""}
+            aria-pressed={preferences.showPrice}
+            onClick={() => onShowPrice(true)}
+          >
+            显示
+          </button>
+          <button
+            type="button"
+            className={!preferences.showPrice ? "is-selected" : ""}
+            aria-pressed={!preferences.showPrice}
+            onClick={() => onShowPrice(false)}
+          >
+            隐藏
+          </button>
         </div>
+      </div>
+
+      <div className="settings-row">
+        <span className="settings-label">色块</span>
+        <div className="segmented" role="group" aria-label="涨跌幅背景色块">
+          <button
+            type="button"
+            className={!preferences.changeBackground ? "is-selected" : ""}
+            aria-pressed={!preferences.changeBackground}
+            onClick={() => onChangeBackground(false)}
+          >
+            关
+          </button>
+          <button
+            type="button"
+            className={preferences.changeBackground ? "is-selected" : ""}
+            aria-pressed={preferences.changeBackground}
+            onClick={() => onChangeBackground(true)}
+          >
+            开
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-row">
+        <span className="settings-label">布局</span>
+        <div className="segmented layout-segmented" role="group" aria-label="列表布局">
+          <button
+            type="button"
+            className={preferences.layout === "single" ? "is-selected" : ""}
+            aria-label="单列"
+            aria-pressed={preferences.layout === "single"}
+            onClick={() => onLayout("single")}
+          >
+            <span className="layout-glyph single" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          </button>
+          <button
+            type="button"
+            className={preferences.layout === "double" ? "is-selected" : ""}
+            aria-label="双列"
+            aria-pressed={preferences.layout === "double"}
+            onClick={() => onLayout("double")}
+          >
+            <span className="layout-glyph double" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-row">
+        <span className="settings-label">刷新</span>
         <div className="segmented" role="group" aria-label="刷新频率">
           {refreshOptions.map((option) => (
             <button
@@ -130,11 +203,6 @@ export function SettingsPopover({
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="settings-foot">
-        <span className="settings-dot" />
-        <span>行情来自东方财富公开接口，可能存在延迟</span>
       </div>
     </div>
   );

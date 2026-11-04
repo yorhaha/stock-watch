@@ -17,7 +17,14 @@ export function IndexStrip({ indices, quotes, trends }: IndexStripProps) {
         const quote = quotes[index.secid];
         const tone = toneOf(quote?.pct);
         return (
-          <div className={`index-card tone-${tone}`} key={index.secid}>
+          <div
+            className={`index-card tone-${tone}`}
+            key={index.secid}
+            data-secid={index.secid}
+            data-price={quote?.price ?? ""}
+            data-pct={quote?.pct ?? ""}
+            aria-label={quote ? `${quote.name} ${formatPrice(quote.price)} ${formatPercent(quote.pct)}` : index.name}
+          >
             <div className="index-copy">
               <span className="index-name">{quote?.name || index.name}</span>
               {quote ? (
@@ -26,7 +33,7 @@ export function IndexStrip({ indices, quotes, trends }: IndexStripProps) {
                 <span className="index-value skeleton-text">—</span>
               )}
               <span className={`index-change tone-${tone}`}>
-                {quote ? formatPercent(quote.pct) : "载入中"}
+                {quote ? formatPercent(quote.pct) : "—"}
               </span>
             </div>
             <div className="index-chart" aria-hidden="true">

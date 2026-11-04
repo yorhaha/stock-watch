@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin),
   title: "Tape · A 股日内盯盘",
   description:
-    "一列股票，一眼看清。为 A 股日内盯盘设计的极简自选行情页：实时价格、分时走势、行内大图与键盘操作。",
+    "一列股票，一眼看清。为 A 股日内盯盘设计的极简自选行情页：单行高密度走势、实时价格与独立分时详情。",
   applicationName: "Tape",
   keywords: ["A股", "盯盘", "自选股", "分时图", "股票行情", "Tape"],
   authors: [{ name: "yorhaha", url: "https://github.com/yorhaha" }],
@@ -73,11 +73,17 @@ const themeScript = `
     var colors = prefs.colors === "intl" ? "intl" : "cn";
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.colors = colors;
+    document.documentElement.dataset.showPrice = prefs.showPrice === false ? "false" : "true";
+    document.documentElement.dataset.changeBg = prefs.changeBackground === true ? "true" : "false";
+    document.documentElement.dataset.layout = prefs.layout === "double" ? "double" : "single";
     document.documentElement.style.colorScheme = theme;
   } catch (error) {
     var fallback = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     document.documentElement.dataset.theme = fallback;
     document.documentElement.dataset.colors = "cn";
+    document.documentElement.dataset.showPrice = "true";
+    document.documentElement.dataset.changeBg = "false";
+    document.documentElement.dataset.layout = "single";
     document.documentElement.style.colorScheme = fallback;
   }
 })();

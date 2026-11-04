@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { searchStocks } from "@/lib/eastmoney";
-import { POPULAR_STOCKS, exchangeLabel } from "@/lib/market";
+import { POPULAR_STOCKS } from "@/lib/market";
 import type { SearchStock, StockRef } from "@/lib/types";
-import { CheckIcon, PlusIcon, SearchIcon } from "./Icons";
+import { CheckIcon, CloseIcon, PlusIcon, SearchIcon } from "./Icons";
 
 interface AddStockDialogProps {
   open: boolean;
@@ -28,6 +28,7 @@ export function AddStockDialog({
   const [highlighted, setHighlighted] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
   const added = useMemo(() => new Set(addedSecids), [addedSecids]);
 
   useEffect(() => {
@@ -42,12 +43,14 @@ export function AddStockDialog({
     setResults([]);
     setError(null);
     setHighlighted(0);
+    previousFocus.current = document.activeElement as HTMLElement | null;
     const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 30);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       window.clearTimeout(focusTimer);
       document.body.style.overflow = previousOverflow;
+      if (previousFocus.current?.isConnected) previousFocus.current.focus();
     };
   }, [open]);
 
@@ -81,7 +84,7 @@ export function AddStockDialog({
       } catch (reason) {
         if (controller.signal.aborted) return;
         setResults([]);
-        setError(reason instanceof Error ? reason.message : "搜索暂时不可用");
+        setError(reason instanceof Error ? reason.message : "搜索不可用");
       } finally {
         if (!controller.signal.aborted) setSearching(false);
       }
@@ -134,23 +137,16 @@ export function AddStockDialog({
         aria-modal="true"
         aria-label="添加股票"
         ref={dialogRef}
+        data-state={searching ? "searching" : "idle"}
         onKeyDown={(event) => {
-          if (event.key === "ArrowDown") {
-            event.preventDefault();
-            moveHighlight(1);
-          } else if (event.key === "ArrowUp") {
-            event.preventDefault();
-            moveHighlight(-1);
-          } else if (event.key === "Enter") {
-            event.preventDefault();
-            const stock = visible[highlighted];
-            if (stock) choose(stock);
-          } else if (event.key === "Escape") {
+          if (event.key === "Escape") {
             event.preventDefault();
             onClose();
-          } else if (event.key === "Tab") {
+            return;
+          }
+          if (event.key === "Tab") {
             const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
-              'input, button:not([disabled]), [href]',
+              "input, button:not([disabled]), [href]",
             );
             if (!focusable || focusable.length === 0) return;
             const first = focusable[0];
@@ -162,6 +158,19 @@ export function AddStockDialog({
               event.preventDefault();
               first.focus();
             }
+            return;
+          }
+          if (event.target !== inputRef.current || event.nativeEvent.isComposing) return;
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            moveHighlight(1);
+          } else if (event.key === "ArrowUp") {
+            event.preventDefault();
+            moveHighlight(-1);
+          } else if (event.key === "Enter") {
+            event.preventDefault();
+            const stock = visible[highlighted];
+            if (stock) choose(stock);
           }
         }}
       >
@@ -172,7 +181,7 @@ export function AddStockDialog({
             className="command-input"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索股票名称或代码"
+            placeholder="搜索股票"
             autoComplete="off"
             spellCheck={false}
             aria-label="搜索股票"
@@ -180,14 +189,9 @@ export function AddStockDialog({
             aria-activedescendant={visible[highlighted] ? `command-result-${highlighted}` : undefined}
           />
           {searching ? <span className="search-spinner" aria-label="搜索中" /> : null}
-          <button type="button" className="esc-key" onClick={onClose}>
-            ESC
+          <button type="button" className="icon-button compact command-close" onClick={onClose} aria-label="关闭">
+            <CloseIcon size={14} />
           </button>
-        </div>
-
-        <div className="command-section-head">
-          <span>{query.trim() ? "搜索结果" : "热门 A 股"}</span>
-          <span>{query.trim() ? "按名称或代码" : "点击添加至自选"}</span>
         </div>
 
         <div className="command-results" id="stock-search-results" role="listbox">
@@ -198,61 +202,32 @@ export function AddStockDialog({
                 type="button"
                 key={stock.secid}
                 id={`command-result-${index}`}
+                data-secid={stock.secid}
                 role="option"
                 aria-selected={index === highlighted}
+                aria-label={`${isAdded ? "已添加" : "添加"} ${stock.name}`}
                 className={`command-result ${index === highlighted ? "is-highlighted" : ""} ${isAdded ? "is-added" : ""}`}
                 onMouseEnter={() => setHighlighted(index)}
                 onClick={() => choose(stock)}
                 disabled={isAdded}
               >
-                <span className="result-exchange">{exchangeLabel(stock.exchange)}</span>
                 <span className="result-identity">
                   <span className="result-name">{stock.name}</span>
-                  <span className="result-code">{stock.code}</span>
                 </span>
-                <span className="result-action">
-                  {isAdded ? (
-                    <>
-                      <CheckIcon size={13} />
-                      已添加
-                    </>
-                  ) : (
-                    <>
-                      <PlusIcon size={14} />
-                      添加
-                    </>
-                  )}
+                <span className="result-action" aria-hidden="true">
+                  {isAdded ? <CheckIcon size={14} /> : <PlusIcon size={14} />}
                 </span>
               </button>
             );
           })}
 
           {query.trim() && !searching && !error && visible.length === 0 ? (
-            <div className="command-empty">
-              <p>没有找到「{query.trim()}」</p>
-              <span>试试股票名称或 6 位代码，目前支持沪深京 A 股。</span>
-            </div>
+            <div className="command-empty">未找到「{query.trim()}」</div>
           ) : null}
 
           {error ? (
-            <div className="command-empty command-error">
-              <p>搜索暂时不可用</p>
-              <span>{error}，请稍后重试。</span>
-            </div>
+            <div className="command-empty command-error">{error}</div>
           ) : null}
-        </div>
-
-        <div className="command-footer">
-          <span>
-            <kbd>↑</kbd>
-            <kbd>↓</kbd>
-            选择
-          </span>
-          <span>
-            <kbd>↵</kbd>
-            添加
-          </span>
-          <span className="command-source">行情来自东方财富</span>
         </div>
       </div>
     </div>

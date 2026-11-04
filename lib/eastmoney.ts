@@ -10,11 +10,9 @@ const QUOTE_FIELDS = [
   "f2",
   "f3",
   "f4",
-  "f5",
   "f6",
   "f7",
   "f8",
-  "f9",
   "f10",
   "f12",
   "f13",
@@ -23,10 +21,6 @@ const QUOTE_FIELDS = [
   "f16",
   "f17",
   "f18",
-  "f20",
-  "f21",
-  "f23",
-  "f62",
 ].join(",");
 
 type Primitive = string | number | null | undefined;
@@ -41,7 +35,7 @@ function numeric(value: Primitive): number | null {
   return null;
 }
 
-function quoteFromRaw(raw: RawRecord, fetchedAt: number): Quote | null {
+function quoteFromRaw(raw: RawRecord): Quote | null {
   const code = String(raw.f12 ?? "");
   const market = raw.f13;
   if (!code || (market !== 0 && market !== 1)) return null;
@@ -52,21 +46,14 @@ function quoteFromRaw(raw: RawRecord, fetchedAt: number): Quote | null {
     price: numeric(raw.f2),
     pct: numeric(raw.f3),
     change: numeric(raw.f4),
-    volume: numeric(raw.f5),
     amount: numeric(raw.f6),
     amplitude: numeric(raw.f7),
     turnover: numeric(raw.f8),
-    pe: numeric(raw.f9),
     volumeRatio: numeric(raw.f10),
     high: numeric(raw.f15),
     low: numeric(raw.f16),
     open: numeric(raw.f17),
     preClose: numeric(raw.f18),
-    marketCap: numeric(raw.f20),
-    floatCap: numeric(raw.f21),
-    pb: numeric(raw.f23),
-    mainFlow: numeric(raw.f62),
-    fetchedAt,
   };
 }
 
@@ -105,10 +92,9 @@ export async function fetchQuotes(
     `${QUOTE_ENDPOINT}?${params.toString()}&_=${Date.now()}`,
     signal,
   )) as { data?: { diff?: RawRecord[] } };
-  const now = Date.now();
   const result = new Map<string, Quote>();
   for (const raw of payload.data?.diff ?? []) {
-    const quote = quoteFromRaw(raw, now);
+    const quote = quoteFromRaw(raw);
     if (quote) result.set(quote.secid, quote);
   }
   if (result.size === 0 && secids.length > 0) {
@@ -128,7 +114,6 @@ export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<T
   });
   const payload = (await fetchJson(`${TREND_ENDPOINT}?${params.toString()}`, signal)) as {
     data?: {
-      name?: string;
       preClose?: number;
       trends?: string[];
     } | null;
@@ -141,8 +126,7 @@ export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<T
   for (const row of data.trends) {
     const values = row.split(",");
     if (values.length < 8) continue;
-    const [time, openValue, closeValue, highValue, lowValue, volumeValue, , averageValue] =
-      values;
+    const [time, openValue, closeValue, , , volumeValue, , averageValue] = values;
     const price = numeric(closeValue);
     if (price == null) continue;
     if (!tradeDate && time.includes(" ")) tradeDate = time.split(" ")[0];
@@ -152,8 +136,6 @@ export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<T
       price,
       average: numeric(averageValue) ?? price,
       open: numeric(openValue) ?? price,
-      high: numeric(highValue) ?? price,
-      low: numeric(lowValue) ?? price,
       volume: numeric(volumeValue) ?? 0,
     });
   }
@@ -166,11 +148,9 @@ export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<T
 
   return {
     secid,
-    name: data.name ?? "",
     tradeDate,
     preClose,
     points,
-    fetchedAt: Date.now(),
   };
 }
 
@@ -221,7 +201,6 @@ interface SuggestItem {
   Name?: string;
   Classify?: string;
   SecurityTypeName?: string;
-  MktNum?: string;
   QuoteID?: string;
 }
 
@@ -251,16 +230,10 @@ export async function searchStocks(query: string, signal?: AbortSignal): Promise
     if (!isStockCode(code) || !/^[01]\.\d{6}$/.test(secid)) continue;
     if (seen.has(secid)) continue;
     seen.add(secid);
-    const exchange: StockRef["exchange"] = isBeijing
-      ? "BJ"
-      : item.MktNum === "1"
-        ? "SH"
-        : "SZ";
     results.push({
       secid,
       code,
       name: String(item.Name ?? code),
-      exchange,
     });
   }
   return results;
