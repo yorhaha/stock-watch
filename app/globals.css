@@ -567,6 +567,60 @@ a {
   gap: 4px;
 }
 
+.economic-calendar {
+  padding-top: 12px;
+  margin-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.economic-events {
+  display: flex;
+  gap: 18px;
+  padding: 0 12px;
+  margin: 0;
+  list-style: none;
+}
+
+.economic-event {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
+.economic-event-name {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.economic-event-time {
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 540;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.economic-event-date {
+  flex-basis: 100%;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 10px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 .watchlist {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -2427,6 +2481,28 @@ a {
 
   .watchlist-section {
     margin-top: 10px;
+  }
+
+  .economic-calendar {
+    padding-top: 9px;
+    margin-top: 16px;
+  }
+
+  .economic-events {
+    gap: 10px;
+    padding: 0 8px;
+  }
+
+  .economic-event-name {
+    font-size: 10px;
+  }
+
+  .economic-event-time {
+    font-size: 12px;
+  }
+
+  .economic-event-date {
+    font-size: 9px;
   }
 
   .watchlist-toolbar {

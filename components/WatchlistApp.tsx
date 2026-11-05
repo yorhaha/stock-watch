@@ -32,6 +32,7 @@ import { MarketClock } from "./MarketClock";
 import { SettingsPopover } from "./SettingsPopover";
 import { StockRow } from "./StockRow";
 import { DetailSheet } from "./DetailSheet";
+import { EconomicCalendar } from "./EconomicCalendar";
 
 interface Toast {
   id: number;
@@ -569,6 +570,8 @@ export function WatchlistApp() {
             </div>
           )}
         </section>
+
+        <EconomicCalendar />
       </main>
 
       {detailTarget && detailInstrument ? (

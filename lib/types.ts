@@ -63,6 +63,16 @@ export interface SearchStock extends StockRef {
   alreadyAdded?: boolean;
 }
 
+export type EconomicEventKind = "fed" | "nonfarm" | "cpi" | "delivery";
+
+export interface EconomicEvent {
+  kind: EconomicEventKind;
+  name: string;
+  startsAt: number;
+  date: string;
+  time: string;
+}
+
 export type ThemeMode = "auto" | "light" | "dark";
 export type SortMode = "manual" | "change-desc" | "change-asc";
 

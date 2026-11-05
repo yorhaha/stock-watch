@@ -108,6 +108,7 @@ export const STORAGE_KEYS = {
   watchlist: "tape.watchlist.v1",
   indices: "tape.indices.v1",
   prefs: "tape.preferences.v1",
+  events: "tape.events.v2",
 } as const;
 
 export const DEFAULT_PREFERENCES = {
