@@ -10,6 +10,7 @@ import {
   WATCHLIST_LIMIT,
   formatSyncTime,
   formatTradeDate,
+  isHongKongIndex,
   isKoreanIndex,
   sortStocksByChange,
 } from "@/lib/market";
@@ -55,6 +56,10 @@ export function WatchlistApp() {
 
   const stockSecids = useMemo(() => stocks.map((stock) => stock.secid), [stocks]);
   const indexSecids = useMemo(() => indices.map((index) => index.secid), [indices]);
+  const hasHongKongIndex = useMemo(
+    () => indices.some((index) => isHongKongIndex(index.secid)),
+    [indices],
+  );
   const hasKoreanIndex = useMemo(
     () => indices.some((index) => isKoreanIndex(index.secid)),
     [indices],
@@ -62,6 +67,7 @@ export function WatchlistApp() {
   const activeMarket =
     session.isTrading ||
     session.isAuction ||
+    (hasHongKongIndex && session.isHongKongTrading) ||
     (hasKoreanIndex && session.isKoreanTrading);
   const { quotes, trends, status, error, lastSyncedAt, refresh } = useMarketData(
     stockSecids,

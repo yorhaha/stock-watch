@@ -10,6 +10,7 @@ export const MARKET_PROFILES: Record<
   { totalMinutes: number; axisLabels: [string, string, string] }
 > = {
   cn: { totalMinutes: 240, axisLabels: ["09:30", "11:30 / 13:00", "15:00"] },
+  hk: { totalMinutes: 330, axisLabels: ["09:30", "12:00 / 13:00", "16:00"] },
   kr: { totalMinutes: 390, axisLabels: ["08:00", "11:15", "14:30"] },
 };
 
@@ -36,6 +37,19 @@ export const DEFAULT_INDICES: StockRef[] = [
   { secid: "1.000001", code: "000001", name: "上证指数" },
   { secid: "0.399001", code: "399001", name: "深证成指" },
   { secid: "0.399006", code: "399006", name: "创业板指" },
+];
+
+export const INDEX_CATALOG: StockRef[] = [
+  { secid: "1.000001", code: "000001", name: "上证指数" },
+  { secid: "0.399001", code: "399001", name: "深证成指" },
+  { secid: "0.399006", code: "399006", name: "创业板指" },
+  { secid: "1.000688", code: "000688", name: "科创50" },
+  { secid: "1.000300", code: "000300", name: "沪深300" },
+  { secid: "1.000905", code: "000905", name: "中证500" },
+  { secid: "100.HSI", code: "HSI", name: "恒生指数" },
+  { secid: "124.HSTECH", code: "HSTECH", name: "恒生科技指数" },
+  { secid: "100.KS11", code: "KS11", name: "韩国KOSPI" },
+  { secid: "100.KOSPI200", code: "KOSPI200", name: "韩国KOSPI200" },
 ];
 
 export const POPULAR_STOCKS: StockRef[] = [
@@ -102,6 +116,18 @@ function readParts(now = new Date()) {
   return parts;
 }
 
+function isTradingWindow(
+  now: Date,
+  windows: Array<[start: number, end: number]>,
+): boolean {
+  const parts = readParts(now);
+  const weekday = parts.weekday ?? "Mon";
+  if (weekday === "Sat" || weekday === "Sun") return false;
+  const minutes =
+    Number(parts.hour ?? "0") * 60 + Number(parts.minute ?? "0");
+  return windows.some(([start, end]) => minutes >= start && minutes < end);
+}
+
 export function getMarketSession(now = new Date()): SessionInfo {
   const parts = readParts(now);
   const weekday = parts.weekday ?? "Mon";
@@ -151,6 +177,7 @@ export function getMarketSession(now = new Date()): SessionInfo {
     label,
     isTrading,
     isAuction,
+    isHongKongTrading: isHongKongMarketOpen(now),
     isKoreanTrading: isKoreanMarketOpen(now),
     clock,
     dateLabel,
@@ -158,13 +185,15 @@ export function getMarketSession(now = new Date()): SessionInfo {
   };
 }
 
+export function isHongKongMarketOpen(now = new Date()): boolean {
+  return isTradingWindow(now, [
+    [9 * 60 + 30, 12 * 60],
+    [13 * 60, 16 * 60],
+  ]);
+}
+
 export function isKoreanMarketOpen(now = new Date()): boolean {
-  const parts = readParts(now);
-  const weekday = parts.weekday ?? "Mon";
-  if (weekday === "Sat" || weekday === "Sun") return false;
-  const minutes =
-    Number(parts.hour ?? "0") * 60 + Number(parts.minute ?? "0");
-  return minutes >= 8 * 60 && minutes < 14 * 60 + 30;
+  return isTradingWindow(now, [[8 * 60, 14 * 60 + 30]]);
 }
 
 export function tradingMinuteFromTime(
@@ -174,6 +203,12 @@ export function tradingMinuteFromTime(
   const time = value.includes(" ") ? value.split(" ")[1] : value;
   const [hour, minute] = time.split(":").map(Number);
   const total = hour * 60 + minute;
+  if (market === "hk") {
+    if (total <= 12 * 60) {
+      return Math.max(0, Math.min(150, total - (9 * 60 + 30)));
+    }
+    return Math.max(150, Math.min(330, 150 + total - 13 * 60));
+  }
   if (market === "kr") {
     return Math.max(0, Math.min(390, total - 8 * 60));
   }
@@ -266,17 +301,28 @@ export function isIndexCode(code: string): boolean {
   return /^(000|399|899|930|931|932)\d{3}$/.test(code);
 }
 
+const HONG_KONG_INDEX_SECIDS = new Set(["100.HSI", "124.HSTECH"]);
+const KOREAN_INDEX_SECIDS = new Set(["100.KS11", "100.KOSPI200"]);
+
 export function marketOfSecid(secid: string): MarketKind {
-  return secid.startsWith("100.") ? "kr" : "cn";
+  if (HONG_KONG_INDEX_SECIDS.has(secid)) return "hk";
+  if (KOREAN_INDEX_SECIDS.has(secid)) return "kr";
+  return "cn";
+}
+
+export function isHongKongIndex(secid: string): boolean {
+  return HONG_KONG_INDEX_SECIDS.has(secid);
 }
 
 export function isKoreanIndex(secid: string): boolean {
-  return secid === "100.KS11" || secid === "100.KOSPI200";
+  return KOREAN_INDEX_SECIDS.has(secid);
 }
 
 export function isSupportedIndex(secid: string, code: string): boolean {
   return (
-    (/^[01]\.\d{6}$/.test(secid) && isIndexCode(code)) || isKoreanIndex(secid)
+    (/^[01]\.\d{6}$/.test(secid) && isIndexCode(code)) ||
+    isHongKongIndex(secid) ||
+    isKoreanIndex(secid)
   );
 }
 

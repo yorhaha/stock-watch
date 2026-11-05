@@ -1,7 +1,5 @@
 import {
   isFundCode,
-  isIndexCode,
-  isKoreanIndex,
   isWatchlistCode,
   marketOfSecid,
   tradingMinuteFromTime,
@@ -12,6 +10,8 @@ const QUOTE_ENDPOINT = "https://push2.eastmoney.com/api/qt/ulist.np/get";
 const QUOTE_FALLBACK_ENDPOINT =
   "https://push2delay.eastmoney.com/api/qt/ulist.np/get";
 const TREND_ENDPOINT = "https://push2.eastmoney.com/api/qt/stock/trends2/get";
+const TREND_DELAY_ENDPOINT =
+  "https://push2delay.eastmoney.com/api/qt/stock/trends2/get";
 const TREND_HISTORY_ENDPOINT = "https://push2his.eastmoney.com/api/qt/stock/trends2/get";
 const KLINE_ENDPOINT = "https://push2his.eastmoney.com/api/qt/stock/kline/get";
 const SEARCH_ENDPOINT = "https://searchapi.eastmoney.com/api/suggest/get";
@@ -50,7 +50,9 @@ function numeric(value: Primitive): number | null {
 function quoteFromRaw(raw: RawRecord): Quote | null {
   const code = String(raw.f12 ?? "");
   const market = raw.f13;
-  if (!code || (market !== 0 && market !== 1 && market !== 100)) return null;
+  if (!code || (market !== 0 && market !== 1 && market !== 100 && market !== 124)) {
+    return null;
+  }
   const rawPrice = numeric(raw.f2);
   const preClose = numeric(raw.f18);
   const traded = rawPrice != null && rawPrice > 0;
@@ -217,9 +219,8 @@ async function requestTrend(
 }
 
 export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<Trend | null> {
-  const historyFirst = marketOfSecid(secid) === "kr";
-  const primary = historyFirst ? TREND_HISTORY_ENDPOINT : TREND_ENDPOINT;
-  const secondary = historyFirst ? TREND_ENDPOINT : TREND_HISTORY_ENDPOINT;
+  const primary =
+    marketOfSecid(secid) === "cn" ? TREND_ENDPOINT : TREND_DELAY_ENDPOINT;
 
   try {
     const trend = await requestTrend(primary, secid, 1, signal);
@@ -228,7 +229,7 @@ export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<T
     if (signal?.aborted) throw error;
   }
 
-  return requestTrend(secondary, secid, 2, signal);
+  return requestTrend(TREND_HISTORY_ENDPOINT, secid, 2, signal);
 }
 
 interface KlinePayload {
@@ -387,32 +388,6 @@ export async function searchStocks(query: string, signal?: AbortSignal): Promise
       code,
       name: String(item.Name ?? code),
     });
-  }
-  return results;
-}
-
-export async function searchIndices(query: string, signal?: AbortSignal): Promise<SearchStock[]> {
-  const results: SearchStock[] = [];
-  const seen = new Set<string>();
-  const seenNames = new Set<string>();
-  for (const item of await querySuggestions(query, signal)) {
-    const code = String(item.Code ?? "");
-    const secid = String(item.QuoteID ?? "");
-    const isCnIndex =
-      item.Classify === "Index" &&
-      /^[01]\.\d{6}$/.test(secid) &&
-      isIndexCode(code);
-    const isKrIndex =
-      item.Classify === "UniversalIndex" &&
-      isKoreanIndex(secid) &&
-      secid === `100.${code}`;
-    if (!isCnIndex && !isKrIndex) continue;
-    const name = String(item.Name ?? code);
-    const nameKey = name.replace(/\s+/g, "").toLowerCase();
-    if (seen.has(secid) || seenNames.has(nameKey)) continue;
-    seen.add(secid);
-    seenNames.add(nameKey);
-    results.push({ secid, code, name });
   }
   return results;
 }
