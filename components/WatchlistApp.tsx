@@ -10,6 +10,7 @@ import {
   WATCHLIST_LIMIT,
   formatSyncTime,
   formatTradeDate,
+  isKoreanIndex,
   sortStocksByChange,
 } from "@/lib/market";
 import type { StockRef } from "@/lib/types";
@@ -28,7 +29,7 @@ import { IndexStrip } from "./IndexStrip";
 import { MarketClock } from "./MarketClock";
 import { SettingsPopover } from "./SettingsPopover";
 import { StockRow } from "./StockRow";
-import { StockDetailSheet } from "./StockDetailSheet";
+import { DetailSheet } from "./DetailSheet";
 
 interface Toast {
   id: number;
@@ -55,7 +56,14 @@ export function WatchlistApp() {
 
   const stockSecids = useMemo(() => stocks.map((stock) => stock.secid), [stocks]);
   const indexSecids = useMemo(() => indices.map((index) => index.secid), [indices]);
-  const activeMarket = session.isTrading || session.isAuction;
+  const hasKoreanIndex = useMemo(
+    () => indices.some((index) => isKoreanIndex(index.secid)),
+    [indices],
+  );
+  const activeMarket =
+    session.isTrading ||
+    session.isAuction ||
+    (hasKoreanIndex && session.isKoreanTrading);
   const { quotes, trends, status, error, lastSyncedAt, refresh } = useMarketData(
     stockSecids,
     indexSecids,
@@ -68,7 +76,9 @@ export function WatchlistApp() {
   );
 
   const [focusedSecid, setFocusedSecid] = useState<string | null>(null);
-  const [detailSecid, setDetailSecid] = useState<string | null>(null);
+  const [detailTarget, setDetailTarget] = useState<
+    { secid: string; kind: "stock" | "index" } | null
+  >(null);
   const [editing, setEditing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -81,8 +91,8 @@ export function WatchlistApp() {
   const latestTick = useMemo(() => {
     let date = "";
     let time = "";
-    for (const stock of stocks) {
-      const trend = trends[stock.secid];
+    for (const item of [...stocks, ...indices]) {
+      const trend = trends[item.secid];
       const last = trend?.points[trend.points.length - 1];
       if (!trend?.tradeDate || !last) continue;
       const raw = last.time.includes(" ") ? last.time.split(" ")[1] : last.time;
@@ -93,12 +103,13 @@ export function WatchlistApp() {
       }
     }
     return { date, time };
-  }, [stocks, trends]);
+  }, [stocks, indices, trends]);
 
-  const detailStock = useMemo(
-    () => stocks.find((stock) => stock.secid === detailSecid) ?? null,
-    [stocks, detailSecid],
-  );
+  const detailInstrument = useMemo(() => {
+    if (!detailTarget) return null;
+    const list = detailTarget.kind === "stock" ? stocks : indices;
+    return list.find((item) => item.secid === detailTarget.secid) ?? null;
+  }, [stocks, indices, detailTarget]);
 
   const fallbackTime = lastSyncedAt ? formatSyncTime(lastSyncedAt) : "—";
   const dataTimeLabel = latestTick.date
@@ -111,9 +122,9 @@ export function WatchlistApp() {
         ? "行情连接中断"
         : `行情更新至 ${dataTimeLabel}`;
   const hasStatusAlert = status === "stale" || status === "error";
-  const modalOpen = dialogOpen || detailStock !== null || indexManagerOpen;
+  const modalOpen = dialogOpen || detailInstrument !== null || indexManagerOpen;
 
-  const closeDetail = useCallback(() => setDetailSecid(null), []);
+  const closeDetail = useCallback(() => setDetailTarget(null), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
   const showToast = useCallback((message: string) => {
@@ -133,24 +144,31 @@ export function WatchlistApp() {
     if (focusedSecid && !stocks.some((stock) => stock.secid === focusedSecid)) {
       setFocusedSecid(null);
     }
-    if (detailSecid && !stocks.some((stock) => stock.secid === detailSecid)) {
-      setDetailSecid(null);
+    if (detailTarget) {
+      const list = detailTarget.kind === "stock" ? stocks : indices;
+      if (!list.some((item) => item.secid === detailTarget.secid)) {
+        setDetailTarget(null);
+      }
     }
-  }, [stocks, focusedSecid, detailSecid]);
+  }, [stocks, indices, focusedSecid, detailTarget]);
 
   useEffect(() => {
-    if (!focusedSecid || detailSecid) return;
+    if (!focusedSecid || detailTarget) return;
     const row = document.getElementById(`stock-${focusedSecid}`);
     row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
     const target = row?.querySelector<HTMLElement>(".stock-main");
     if (target && document.activeElement !== target) {
       target.focus({ preventScroll: true });
     }
-  }, [focusedSecid, detailSecid]);
+  }, [focusedSecid, detailTarget]);
 
   const openDetail = useCallback((stock: StockRef) => {
     setFocusedSecid(stock.secid);
-    setDetailSecid(stock.secid);
+    setDetailTarget({ secid: stock.secid, kind: "stock" });
+  }, []);
+
+  const openIndexDetail = useCallback((index: StockRef) => {
+    setDetailTarget({ secid: index.secid, kind: "index" });
   }, []);
 
   const activate = useCallback((stock: StockRef) => {
@@ -170,7 +188,9 @@ export function WatchlistApp() {
           null;
         setFocusedSecid(next?.secid ?? null);
       }
-      if (detailSecid === stock.secid) setDetailSecid(null);
+      setDetailTarget((current) =>
+        current?.kind === "stock" && current.secid === stock.secid ? null : current,
+      );
       toastId.current += 1;
       setToast({
         id: toastId.current,
@@ -179,7 +199,7 @@ export function WatchlistApp() {
         index: rawIndex,
       });
     },
-    [stocks, displayStocks, remove, focusedSecid, detailSecid],
+    [stocks, displayStocks, remove, focusedSecid],
   );
 
   const handleUndo = useCallback(() => {
@@ -205,7 +225,7 @@ export function WatchlistApp() {
       }
       add(stock);
       setFocusedSecid(stock.secid);
-      setDetailSecid(null);
+      setDetailTarget(null);
       showToast(`已添加 ${stock.name}`);
     },
     [stocks, add, showToast],
@@ -225,7 +245,7 @@ export function WatchlistApp() {
       }
       addMany(fresh);
       setFocusedSecid(fresh[0].secid);
-      setDetailSecid(null);
+      setDetailTarget(null);
       showToast(fresh.length === 1 ? `已导入 ${fresh[0].name}` : `已导入 ${fresh.length} 只股票`);
     },
     [stocks, addMany, showToast],
@@ -285,7 +305,7 @@ export function WatchlistApp() {
         target?.tagName === "SELECT" ||
         target?.isContentEditable;
 
-      if (detailSecid || indexManagerOpen) return;
+      if (detailTarget || indexManagerOpen) return;
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -320,7 +340,7 @@ export function WatchlistApp() {
     settingsOpen,
     indexManagerOpen,
     editing,
-    detailSecid,
+    detailTarget,
     focusRelative,
   ]);
 
@@ -367,7 +387,7 @@ export function WatchlistApp() {
       data-change-bg={preferences.changeBackground ? "true" : "false"}
       data-layout={preferences.layout}
       data-sort={preferences.sort}
-      data-detail-open={detailSecid ? "true" : "false"}
+      data-detail-open={detailInstrument ? "true" : "false"}
     >
       <a className="skip-link" href="#watchlist">
         跳到自选
@@ -440,7 +460,13 @@ export function WatchlistApp() {
       </header>
 
       <main className="page" inert={modalOpen ? true : undefined}>
-        <IndexStrip indices={indices} quotes={quotes} trends={trends} showValues={preferences.showIndexValue} />
+        <IndexStrip
+          indices={indices}
+          quotes={quotes}
+          trends={trends}
+          showValues={preferences.showIndexValue}
+          onOpen={openIndexDetail}
+        />
 
         <section className="watchlist-section" id="watchlist" aria-label="自选">
           <div className="watchlist-toolbar">
@@ -555,14 +581,15 @@ export function WatchlistApp() {
         </section>
       </main>
 
-      {detailStock ? (
-        <StockDetailSheet
-          key={detailStock.secid}
-          stock={detailStock}
-          quote={quotes[detailStock.secid]}
-          trend={trends[detailStock.secid]}
-          held={detailStock.held === true}
-          onToggleHeld={toggleHeld}
+      {detailTarget && detailInstrument ? (
+        <DetailSheet
+          key={`${detailTarget.kind}-${detailInstrument.secid}`}
+          instrument={detailInstrument}
+          kind={detailTarget.kind}
+          quote={quotes[detailInstrument.secid]}
+          trend={trends[detailInstrument.secid]}
+          held={detailTarget.kind === "stock" ? detailInstrument.held === true : undefined}
+          onToggleHeld={detailTarget.kind === "stock" ? toggleHeld : undefined}
           onClose={closeDetail}
         />
       ) : null}

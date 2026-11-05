@@ -12,6 +12,7 @@ interface DailyKChartProps {
   secid: string;
   name: string;
   code?: string;
+  kind?: "stock" | "index";
 }
 
 function linePath(
@@ -29,7 +30,7 @@ function linePath(
   return path;
 }
 
-export function DailyKChart({ secid, name, code }: DailyKChartProps) {
+export function DailyKChart({ secid, name, code, kind = "stock" }: DailyKChartProps) {
   const [containerRef, width] = useElementWidth<HTMLDivElement>();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const { candles, loading, error, retry } = useDailyKline(secid);
@@ -270,7 +271,7 @@ export function DailyKChart({ secid, name, code }: DailyKChartProps) {
               </div>
               <div className="tooltip-row">
                 <span>成交量</span>
-                <span>{formatVolume(hovered.volume)}</span>
+                <span>{formatVolume(hovered.volume, kind === "index" ? "count" : "hand")}</span>
               </div>
             </div>
           ) : null}

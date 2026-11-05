@@ -1,12 +1,22 @@
-import { isFundCode, isIndexCode, isWatchlistCode, tradingMinuteFromTime } from "./market";
+import {
+  isFundCode,
+  isIndexCode,
+  isKoreanIndex,
+  isWatchlistCode,
+  marketOfSecid,
+  tradingMinuteFromTime,
+} from "./market";
 import type { Candle, Quote, SearchStock, Trend, TrendPoint } from "./types";
 
 const QUOTE_ENDPOINT = "https://push2.eastmoney.com/api/qt/ulist.np/get";
+const QUOTE_FALLBACK_ENDPOINT =
+  "https://push2delay.eastmoney.com/api/qt/ulist.np/get";
 const TREND_ENDPOINT = "https://push2.eastmoney.com/api/qt/stock/trends2/get";
 const TREND_HISTORY_ENDPOINT = "https://push2his.eastmoney.com/api/qt/stock/trends2/get";
 const KLINE_ENDPOINT = "https://push2his.eastmoney.com/api/qt/stock/kline/get";
 const SEARCH_ENDPOINT = "https://searchapi.eastmoney.com/api/suggest/get";
 const SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E326E8";
+const QUOTE_TOKEN = "fa5fd1943c7b386f172d6893dbfba10b";
 
 const QUOTE_FIELDS = [
   "f2",
@@ -40,7 +50,7 @@ function numeric(value: Primitive): number | null {
 function quoteFromRaw(raw: RawRecord): Quote | null {
   const code = String(raw.f12 ?? "");
   const market = raw.f13;
-  if (!code || (market !== 0 && market !== 1)) return null;
+  if (!code || (market !== 0 && market !== 1 && market !== 100)) return null;
   const rawPrice = numeric(raw.f2);
   const preClose = numeric(raw.f18);
   const traded = rawPrice != null && rawPrice > 0;
@@ -84,18 +94,19 @@ async function fetchJson(url: string, outerSignal?: AbortSignal): Promise<unknow
   }
 }
 
-export async function fetchQuotes(
+async function requestQuotes(
+  endpoint: string,
   secids: string[],
   signal?: AbortSignal,
 ): Promise<Map<string, Quote>> {
-  if (secids.length === 0) return new Map();
   const params = new URLSearchParams({
     fltt: "2",
     secids: secids.join(","),
     fields: QUOTE_FIELDS,
+    ut: QUOTE_TOKEN,
   });
   const payload = (await fetchJson(
-    `${QUOTE_ENDPOINT}?${params.toString()}&_=${Date.now()}`,
+    `${endpoint}?${params.toString()}&_=${Date.now()}`,
     signal,
   )) as { data?: { diff?: RawRecord[] } };
   const result = new Map<string, Quote>();
@@ -103,8 +114,37 @@ export async function fetchQuotes(
     const quote = quoteFromRaw(raw);
     if (quote) result.set(quote.secid, quote);
   }
-  if (result.size === 0 && secids.length > 0) {
-    throw new Error("行情暂时不可用");
+  return result;
+}
+
+export async function fetchQuotes(
+  secids: string[],
+  signal?: AbortSignal,
+): Promise<Map<string, Quote>> {
+  if (secids.length === 0) return new Map();
+
+  let primaryError: unknown;
+  let result = new Map<string, Quote>();
+  try {
+    result = await requestQuotes(QUOTE_ENDPOINT, secids, signal);
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    primaryError = error;
+  }
+
+  const missing = secids.filter((secid) => !result.has(secid));
+  if (missing.length > 0) {
+    try {
+      const fallback = await requestQuotes(QUOTE_FALLBACK_ENDPOINT, missing, signal);
+      fallback.forEach((quote, secid) => result.set(secid, quote));
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      if (result.size === 0) primaryError = primaryError ?? error;
+    }
+  }
+
+  if (result.size === 0) {
+    throw primaryError ?? new Error("行情暂时不可用");
   }
   return result;
 }
@@ -119,6 +159,7 @@ interface TrendPayload {
 function trendFromPayload(secid: string, payload: TrendPayload): Trend | null {
   const data = payload.data;
   if (!data?.trends?.length) return null;
+  const market = marketOfSecid(secid);
 
   const datedRows = data.trends.filter((row) => row.includes(" "));
   const latestDate = datedRows.length > 0
@@ -136,7 +177,7 @@ function trendFromPayload(secid: string, payload: TrendPayload): Trend | null {
     if (!tradeDate && time.includes(" ")) tradeDate = time.split(" ")[0];
     points.push({
       time,
-      minute: tradingMinuteFromTime(time),
+      minute: tradingMinuteFromTime(time, market),
       price,
       average: numeric(averageValue) ?? price,
       open: numeric(openValue) ?? price,
@@ -150,38 +191,44 @@ function trendFromPayload(secid: string, payload: TrendPayload): Trend | null {
       ? data.preClose
       : points[0].open;
 
-  return { secid, tradeDate, preClose, points };
+  return { secid, market, tradeDate, preClose, points };
 }
 
-export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<Trend | null> {
+async function requestTrend(
+  endpoint: string,
+  secid: string,
+  ndays: number,
+  signal?: AbortSignal,
+): Promise<Trend | null> {
   const params = new URLSearchParams({
     secid,
     fields1: "f1,f2,f3,f4,f5,f6,f7,f8",
     fields2: "f51,f52,f53,f54,f55,f56,f57,f58",
     iscr: "0",
-    ndays: "1",
+    ndays: String(ndays),
+    ut: QUOTE_TOKEN,
     _: String(Date.now()),
   });
-  let payload = (await fetchJson(
-    `${TREND_ENDPOINT}?${params.toString()}`,
-    signal,
-  )) as TrendPayload;
-  if (payload.data?.trends?.length) return trendFromPayload(secid, payload);
-
-  const historyParams = new URLSearchParams({
-    secid,
-    fields1: "f1,f2,f3,f4,f5,f6,f7,f8",
-    fields2: "f51,f52,f53,f54,f55,f56,f57,f58",
-    iscr: "0",
-    ndays: "2",
-    ut: "fa5fd1943c7b386f172d6893dbfba10b",
-    _: String(Date.now()),
-  });
-  payload = (await fetchJson(
-    `${TREND_HISTORY_ENDPOINT}?${historyParams.toString()}`,
+  const payload = (await fetchJson(
+    `${endpoint}?${params.toString()}`,
     signal,
   )) as TrendPayload;
   return trendFromPayload(secid, payload);
+}
+
+export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<Trend | null> {
+  const historyFirst = marketOfSecid(secid) === "kr";
+  const primary = historyFirst ? TREND_HISTORY_ENDPOINT : TREND_ENDPOINT;
+  const secondary = historyFirst ? TREND_ENDPOINT : TREND_HISTORY_ENDPOINT;
+
+  try {
+    const trend = await requestTrend(primary, secid, 1, signal);
+    if (trend) return trend;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+  }
+
+  return requestTrend(secondary, secid, 2, signal);
 }
 
 interface KlinePayload {
@@ -221,6 +268,7 @@ export async function fetchDailyKline(
     fqt: "1",
     end: "20500101",
     lmt: "260",
+    ut: QUOTE_TOKEN,
     _: String(Date.now()),
   });
   const payload = (await fetchKlineJson(
@@ -348,10 +396,17 @@ export async function searchIndices(query: string, signal?: AbortSignal): Promis
   const seen = new Set<string>();
   const seenNames = new Set<string>();
   for (const item of await querySuggestions(query, signal)) {
-    if (item.Classify !== "Index") continue;
     const code = String(item.Code ?? "");
     const secid = String(item.QuoteID ?? "");
-    if (!isIndexCode(code) || !/^[01]\.\d{6}$/.test(secid)) continue;
+    const isCnIndex =
+      item.Classify === "Index" &&
+      /^[01]\.\d{6}$/.test(secid) &&
+      isIndexCode(code);
+    const isKrIndex =
+      item.Classify === "UniversalIndex" &&
+      isKoreanIndex(secid) &&
+      secid === `100.${code}`;
+    if (!isCnIndex && !isKrIndex) continue;
     const name = String(item.Name ?? code);
     const nameKey = name.replace(/\s+/g, "").toLowerCase();
     if (seen.has(secid) || seenNames.has(nameKey)) continue;

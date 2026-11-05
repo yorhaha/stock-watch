@@ -9,7 +9,12 @@ import {
   scaleY,
   toSeries,
 } from "@/lib/chart";
-import { formatPrice, formatVolume, toneOf } from "@/lib/market";
+import {
+  MARKET_PROFILES,
+  formatPrice,
+  formatVolume,
+  toneOf,
+} from "@/lib/market";
 import type { Quote, Trend } from "@/lib/types";
 
 interface DetailChartProps {
@@ -17,15 +22,17 @@ interface DetailChartProps {
   quote?: Quote;
   name: string;
   code?: string;
+  kind?: "stock" | "index";
 }
 
-export function DetailChart({ trend, quote, name, code }: DetailChartProps) {
+export function DetailChart({ trend, quote, name, code, kind = "stock" }: DetailChartProps) {
   const [containerRef, width] = useElementWidth<HTMLDivElement>();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const rawId = useId();
   const gradientId = `detail-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   const series = useMemo(() => toSeries(trend, quote?.price), [trend, quote?.price]);
+  const profile = MARKET_PROFILES[trend?.market ?? "cn"];
   const geometry = useMemo(() => {
     const right = width > 0 && width < 440 ? 48 : 60;
     const top = 14;
@@ -101,7 +108,7 @@ export function DetailChart({ trend, quote, name, code }: DetailChartProps) {
     if (series.length === 0) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const localX = Math.max(0, Math.min(geometry.chartWidth, event.clientX - rect.left));
-    const minute = (localX / geometry.chartWidth) * 240;
+    const minute = (localX / geometry.chartWidth) * profile.totalMinutes;
     setHoverIndex(nearestPointIndex(series, minute));
   };
 
@@ -206,7 +213,10 @@ export function DetailChart({ trend, quote, name, code }: DetailChartProps) {
               className="detail-volume-divider"
             />
             {series.map((point, index) => {
-              const barWidth = Math.max(1, (geometry.chartWidth / 240) * 0.66);
+              const barWidth = Math.max(
+                1,
+                (geometry.chartWidth / profile.totalMinutes) * 0.66,
+              );
               const volume = point.volume ?? 0;
               const barHeight = (volume / geometry.maxVolume) * geometry.volumeHeight;
               const x = xFor(point.minute) - barWidth / 2;
@@ -245,7 +255,7 @@ export function DetailChart({ trend, quote, name, code }: DetailChartProps) {
             ) : null}
 
             <text x="0" y={geometry.height - 3} className="detail-time-label" textAnchor="start">
-              09:30
+              {profile.axisLabels[0]}
             </text>
             <text
               x={geometry.chartWidth / 2}
@@ -253,7 +263,7 @@ export function DetailChart({ trend, quote, name, code }: DetailChartProps) {
               className="detail-time-label"
               textAnchor="middle"
             >
-              11:30 / 13:00
+              {profile.axisLabels[1]}
             </text>
             <text
               x={geometry.chartWidth}
@@ -261,7 +271,7 @@ export function DetailChart({ trend, quote, name, code }: DetailChartProps) {
               className="detail-time-label"
               textAnchor="end"
             >
-              15:00
+              {profile.axisLabels[2]}
             </text>
 
             <rect
@@ -294,7 +304,7 @@ export function DetailChart({ trend, quote, name, code }: DetailChartProps) {
               </div>
               <div className="tooltip-row">
                 <span>成交量</span>
-                <span>{formatVolume(hovered.volume)}</span>
+                <span>{formatVolume(hovered.volume, kind === "index" ? "count" : "hand")}</span>
               </div>
             </div>
           ) : null}

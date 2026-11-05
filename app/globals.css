@@ -368,6 +368,7 @@ a {
 .index-card {
   position: relative;
   display: grid;
+  width: 100%;
   min-width: 0;
   min-height: 74px;
   grid-template-columns: minmax(0, 1fr) 76px;
@@ -375,6 +376,19 @@ a {
   gap: 10px;
   padding: 12px 16px;
   background: var(--surface);
+  cursor: pointer;
+  outline: none;
+  transition: background 160ms ease;
+}
+
+.index-card:hover {
+  background: var(--hover);
+}
+
+.index-card:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--focus) 45%, transparent);
+  outline-offset: -2px;
+  border-radius: var(--radius-md);
 }
 
 .index-copy {

@@ -5,7 +5,7 @@ import {
   DEFAULT_INDICES,
   INDEX_LIMIT,
   STORAGE_KEYS,
-  isIndexCode,
+  isSupportedIndex,
 } from "@/lib/market";
 import type { StockRef } from "@/lib/types";
 
@@ -18,7 +18,7 @@ function sanitize(value: unknown): StockRef[] {
     const candidate = item as Partial<StockRef>;
     const code = String(candidate.code ?? "");
     const secid = String(candidate.secid ?? "");
-    if (!isIndexCode(code) || !/^[01]\.\d{6}$/.test(secid)) continue;
+    if (!isSupportedIndex(secid, code)) continue;
     if (seen.has(secid)) continue;
     seen.add(secid);
     indices.push({

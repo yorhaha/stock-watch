@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { formatPercent, formatPrice, toneOf } from "@/lib/market";
+import { formatPercent, formatPrice, marketOfSecid, toneOf } from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
 import { Sparkline } from "./Sparkline";
 
@@ -10,9 +10,10 @@ interface IndexStripProps {
   quotes: Record<string, Quote>;
   trends: Record<string, Trend>;
   showValues: boolean;
+  onOpen: (index: StockRef) => void;
 }
 
-export function IndexStrip({ indices, quotes, trends, showValues }: IndexStripProps) {
+export function IndexStrip({ indices, quotes, trends, showValues, onOpen }: IndexStripProps) {
   if (indices.length === 0) return null;
   return (
     <section
@@ -28,13 +29,25 @@ export function IndexStrip({ indices, quotes, trends, showValues }: IndexStripPr
           <div
             className={`index-card tone-${tone}`}
             key={index.secid}
+            role="button"
+            tabIndex={0}
+            aria-haspopup="dialog"
             data-secid={index.secid}
+            data-market={marketOfSecid(index.secid)}
             data-price={quote?.price ?? ""}
             data-pct={quote?.pct ?? ""}
+            onClick={() => onOpen(index)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                event.stopPropagation();
+                onOpen(index);
+              }
+            }}
             aria-label={
               quote
-                ? `${quote.name} ${showValues ? `${formatPrice(quote.price)} ` : ""}${formatPercent(quote.pct)}`
-                : index.name
+                ? `${quote.name} ${showValues ? `${formatPrice(quote.price)} ` : ""}${formatPercent(quote.pct)}，打开详情`
+                : `${index.name}，打开详情`
             }
           >
             <div className="index-copy">

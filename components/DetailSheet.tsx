@@ -7,31 +7,33 @@ import { DailyKChart } from "./DailyKChart";
 import { DetailChart } from "./DetailChart";
 import { BookmarkIcon, CloseIcon } from "./Icons";
 
-interface StockDetailSheetProps {
-  stock: StockRef;
+interface DetailSheetProps {
+  instrument: StockRef;
+  kind: "stock" | "index";
   quote?: Quote;
   trend?: Trend;
-  held: boolean;
-  onToggleHeld: (secid: string) => void;
+  held?: boolean;
+  onToggleHeld?: (secid: string) => void;
   onClose: () => void;
 }
 
-export function StockDetailSheet({
-  stock,
+export function DetailSheet({
+  instrument,
+  kind,
   quote,
   trend,
-  held,
+  held = false,
   onToggleHeld,
   onClose,
-}: StockDetailSheetProps) {
+}: DetailSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
   const previousFocus = useRef<HTMLElement | null>(null);
   onCloseRef.current = onClose;
   const titleId = useId();
-  const name = quote?.name || stock.name;
-  const code = quote?.code || stock.code;
+  const name = quote?.name || instrument.name;
+  const code = quote?.code || instrument.code;
   const tone = toneOf(quote?.pct);
 
   useEffect(() => {
@@ -79,24 +81,27 @@ export function StockDetailSheet({
         aria-modal="true"
         aria-labelledby={titleId}
         ref={sheetRef}
-        data-secid={stock.secid}
+        data-secid={instrument.secid}
+        data-kind={kind}
       >
         <div className="detail-sheet-head">
           <div className="detail-sheet-identity">
             <span className="detail-sheet-name" id={titleId}>
               {name}
             </span>
-            <button
-              type="button"
-              className={`hold-toggle ${held ? "is-held" : ""}`}
-              onClick={() => onToggleHeld(stock.secid)}
-              aria-pressed={held}
-              aria-label={held ? `取消持有 ${name}` : `标记 ${name} 为持有`}
-              title={held ? "取消持有标记" : "标记为持有"}
-            >
-              <BookmarkIcon size={11} />
-              <span>持有</span>
-            </button>
+            {onToggleHeld ? (
+              <button
+                type="button"
+                className={`hold-toggle ${held ? "is-held" : ""}`}
+                onClick={() => onToggleHeld(instrument.secid)}
+                aria-pressed={held}
+                aria-label={held ? `取消持有 ${name}` : `标记 ${name} 为持有`}
+                title={held ? "取消持有标记" : "标记为持有"}
+              >
+                <BookmarkIcon size={11} />
+                <span>持有</span>
+              </button>
+            ) : null}
           </div>
           <div className={`detail-sheet-quote tone-${tone}`}>
             <span className="detail-sheet-price">{formatPrice(quote?.price, code)}</span>
@@ -134,7 +139,7 @@ export function StockDetailSheet({
                   </span>
                 </span>
               </div>
-              <DetailChart trend={trend} quote={quote} name={name} code={code} />
+              <DetailChart trend={trend} quote={quote} name={name} code={code} kind={kind} />
             </section>
             <section className="detail-panel">
               <div className="detail-head">
@@ -158,7 +163,7 @@ export function StockDetailSheet({
                   </span>
                 </span>
               </div>
-              <DailyKChart secid={stock.secid} name={name} code={code} />
+              <DailyKChart secid={instrument.secid} name={name} code={code} kind={kind} />
             </section>
           </div>
         </div>

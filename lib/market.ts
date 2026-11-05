@@ -1,9 +1,17 @@
-import type { Quote, SessionInfo, SortMode, StockRef } from "./types";
+import type { MarketKind, Quote, SessionInfo, SortMode, StockRef } from "./types";
 
 export const MARKET_TIME_ZONE = "Asia/Shanghai";
 
 export const WATCHLIST_LIMIT = 30;
 export const INDEX_LIMIT = 6;
+
+export const MARKET_PROFILES: Record<
+  MarketKind,
+  { totalMinutes: number; axisLabels: [string, string, string] }
+> = {
+  cn: { totalMinutes: 240, axisLabels: ["09:30", "11:30 / 13:00", "15:00"] },
+  kr: { totalMinutes: 390, axisLabels: ["08:00", "11:15", "14:30"] },
+};
 
 export const DEFAULT_STOCKS: StockRef[] = [
   { secid: "1.600519", code: "600519", name: "贵州茅台" },
@@ -143,16 +151,32 @@ export function getMarketSession(now = new Date()): SessionInfo {
     label,
     isTrading,
     isAuction,
+    isKoreanTrading: isKoreanMarketOpen(now),
     clock,
     dateLabel,
     weekday: weekdayMap[weekday] ?? "",
   };
 }
 
-export function tradingMinuteFromTime(value: string): number {
+export function isKoreanMarketOpen(now = new Date()): boolean {
+  const parts = readParts(now);
+  const weekday = parts.weekday ?? "Mon";
+  if (weekday === "Sat" || weekday === "Sun") return false;
+  const minutes =
+    Number(parts.hour ?? "0") * 60 + Number(parts.minute ?? "0");
+  return minutes >= 8 * 60 && minutes < 14 * 60 + 30;
+}
+
+export function tradingMinuteFromTime(
+  value: string,
+  market: MarketKind = "cn",
+): number {
   const time = value.includes(" ") ? value.split(" ")[1] : value;
   const [hour, minute] = time.split(":").map(Number);
   const total = hour * 60 + minute;
+  if (market === "kr") {
+    return Math.max(0, Math.min(390, total - 8 * 60));
+  }
   if (total <= 11 * 60 + 30) {
     return Math.max(0, Math.min(120, total - (9 * 60 + 30)));
   }
@@ -199,11 +223,15 @@ export function formatAmount(value: number | null | undefined): string {
   return `${value.toFixed(0)}`;
 }
 
-export function formatVolume(value: number | null | undefined): string {
+export function formatVolume(
+  value: number | null | undefined,
+  unit: "hand" | "count" = "hand",
+): string {
   if (value == null || !Number.isFinite(value)) return "—";
-  if (Math.abs(value) >= 1e8) return `${(value / 1e8).toFixed(2)}亿手`;
-  if (Math.abs(value) >= 1e4) return `${(value / 1e4).toFixed(2)}万手`;
-  return `${Math.round(value).toLocaleString("zh-CN")}手`;
+  const suffix = unit === "hand" ? "手" : "";
+  if (Math.abs(value) >= 1e8) return `${(value / 1e8).toFixed(2)}亿${suffix}`;
+  if (Math.abs(value) >= 1e4) return `${(value / 1e4).toFixed(2)}万${suffix}`;
+  return `${Math.round(value).toLocaleString("zh-CN")}${suffix}`;
 }
 
 export function formatSyncTime(timestamp: number | null): string {
@@ -236,6 +264,20 @@ export function isWatchlistCode(code: string): boolean {
 
 export function isIndexCode(code: string): boolean {
   return /^(000|399|899|930|931|932)\d{3}$/.test(code);
+}
+
+export function marketOfSecid(secid: string): MarketKind {
+  return secid.startsWith("100.") ? "kr" : "cn";
+}
+
+export function isKoreanIndex(secid: string): boolean {
+  return secid === "100.KS11" || secid === "100.KOSPI200";
+}
+
+export function isSupportedIndex(secid: string, code: string): boolean {
+  return (
+    (/^[01]\.\d{6}$/.test(secid) && isIndexCode(code)) || isKoreanIndex(secid)
+  );
 }
 
 export function sortStocksByChange(

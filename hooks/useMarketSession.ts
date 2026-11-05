@@ -9,6 +9,7 @@ const INITIAL_SESSION: SessionInfo = {
   label: "—",
   isTrading: false,
   isAuction: false,
+  isKoreanTrading: false,
   clock: "--:--:--",
   dateLabel: "",
   weekday: "",
@@ -24,6 +25,7 @@ export function useMarketSession(): SessionInfo {
         if (
           current.phase === next.phase &&
           current.label === next.label &&
+          current.isKoreanTrading === next.isKoreanTrading &&
           current.dateLabel === next.dateLabel &&
           current.weekday === next.weekday
         ) {

@@ -31,8 +31,11 @@ export interface TrendPoint {
   volume: number;
 }
 
+export type MarketKind = "cn" | "kr";
+
 export interface Trend {
   secid: string;
+  market: MarketKind;
   tradeDate: string;
   preClose: number;
   points: TrendPoint[];
@@ -79,6 +82,7 @@ export interface SessionInfo {
   label: string;
   isTrading: boolean;
   isAuction: boolean;
+  isKoreanTrading: boolean;
   clock: string;
   dateLabel: string;
   weekday: string;
