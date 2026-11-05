@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import {
-  formatAmount,
-  formatDelta,
-  formatPercent,
-  formatPrice,
-  toneOf,
-} from "@/lib/market";
+import { formatDelta, formatPercent, formatPrice, toneOf } from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
 import { DailyKChart } from "./DailyKChart";
 import { DetailChart } from "./DetailChart";
@@ -166,46 +160,6 @@ export function StockDetailSheet({
               </div>
               <DailyKChart secid={stock.secid} name={name} code={code} />
             </section>
-          </div>
-          <div className="detail-stats">
-            <div className="stat">
-              <span className="stat-label">今开</span>
-              <span className="stat-value">{formatPrice(quote?.open, code)}</span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">最高</span>
-              <span className="stat-value">{formatPrice(quote?.high, code)}</span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">最低</span>
-              <span className="stat-value">{formatPrice(quote?.low, code)}</span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">昨收</span>
-              <span className="stat-value">{formatPrice(quote?.preClose, code)}</span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">成交额</span>
-              <span className="stat-value">{formatAmount(quote?.amount)}</span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">换手率</span>
-              <span className="stat-value">
-                {quote?.turnover != null ? `${quote.turnover.toFixed(2)}%` : "—"}
-              </span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">量比</span>
-              <span className="stat-value">
-                {quote?.volumeRatio != null ? quote.volumeRatio.toFixed(2) : "—"}
-              </span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">振幅</span>
-              <span className="stat-value">
-                {quote?.amplitude != null ? `${quote.amplitude.toFixed(2)}%` : "—"}
-              </span>
-            </div>
           </div>
         </div>
       </div>

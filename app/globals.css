@@ -990,11 +990,6 @@ a {
   margin-bottom: 8px;
 }
 
-.detail-sheet .detail-stats {
-  margin-top: 8px;
-  padding-top: 12px;
-}
-
 
 .detail-chart {
   position: relative;
@@ -1229,47 +1224,6 @@ a {
 
 .chart-retry:hover {
   color: var(--text);
-}
-
-.detail-stats {
-  display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 0;
-  margin-top: 10px;
-  padding-top: 13px;
-  border-top: 1px solid var(--line);
-}
-
-.stat {
-  min-width: 0;
-  padding: 0 13px;
-  border-left: 1px solid var(--line);
-}
-
-.stat:first-child {
-  padding-left: 0;
-  border-left: 0;
-}
-
-.stat-label {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--text-3);
-  font-size: 9px;
-  font-weight: 450;
-  letter-spacing: 0.015em;
-}
-
-.stat-value {
-  display: block;
-  overflow: hidden;
-  color: var(--text-2);
-  font-size: 11px;
-  font-weight: 520;
-  letter-spacing: -0.005em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
 }
 
 .edit-row {
@@ -2442,22 +2396,6 @@ a {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
-
-  .detail-stats {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-  }
-
-  .stat {
-    padding: 0 8px;
-  }
-
-  .stat-label {
-    font-size: 8.5px;
-  }
-
-  .stat-value {
-    font-size: 10px;
-  }
 }
 
 @media (max-width: 620px) {
@@ -2736,26 +2674,6 @@ a {
     height: 232px;
   }
 
-  .detail-stats {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    margin-top: 6px;
-    padding-top: 10px;
-  }
-
-  .stat {
-    padding: 0 3px;
-  }
-
-  .stat-label {
-    margin-bottom: 3px;
-    font-size: 7.5px;
-    letter-spacing: 0;
-  }
-
-  .stat-value {
-    font-size: 9px;
-  }
-
   .dialog-backdrop {
     align-items: flex-end;
     padding: 12px;
@@ -2897,10 +2815,6 @@ a {
     padding-left: 10px;
   }
 
-  .stat-label {
-    font-size: 7px;
-  }
-
   :root[data-layout="double"] .watchlist:not(.is-editing) .stock-main {
     grid-template-columns: 72px minmax(0, 1fr);
     padding: 4px 6px;
@@ -2920,17 +2834,6 @@ a {
 
   :root[data-change-bg="true"] .index-change {
     padding: 1.5px 3px;
-  }
-}
-
-@media (max-width: 430px) {
-  .stat {
-    padding: 0;
-  }
-
-  .stat-value {
-    font-size: 7.5px;
-    letter-spacing: -0.02em;
   }
 }
 
