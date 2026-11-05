@@ -1,4 +1,6 @@
 import {
+  A50_TRADING_SESSION,
+  BRENT_TRADING_SESSION,
   isFundCode,
   isWatchlistCode,
   marketOfSecid,
@@ -17,6 +19,7 @@ const KLINE_ENDPOINT = "https://push2his.eastmoney.com/api/qt/stock/kline/get";
 const SEARCH_ENDPOINT = "https://searchapi.eastmoney.com/api/suggest/get";
 const SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E326E8";
 const QUOTE_TOKEN = "fa5fd1943c7b386f172d6893dbfba10b";
+const QUOTE_MARKETS = new Set([0, 1, 100, 101, 103, 104, 112, 124]);
 
 const QUOTE_FIELDS = [
   "f2",
@@ -50,10 +53,7 @@ function numeric(value: Primitive): number | null {
 function quoteFromRaw(raw: RawRecord): Quote | null {
   const code = String(raw.f12 ?? "");
   const market = raw.f13;
-  if (
-    !code ||
-    (market !== 0 && market !== 1 && market !== 100 && market !== 124 && market !== 101 && market !== 103)
-  ) {
+  if (!code || typeof market !== "number" || !QUOTE_MARKETS.has(market)) {
     return null;
   }
   const rawPrice = numeric(raw.f2);
@@ -170,6 +170,10 @@ interface TrendRow {
 
 const FUTURES_SESSION_GAP_MINUTES = 30;
 const FUTURES_TOTAL_MINUTES = 1380;
+const A50_OVERNIGHT_MINUTES =
+  (A50_TRADING_SESSION.breakStartMinute - A50_TRADING_SESSION.startMinute + 1440) % 1440;
+const A50_BREAK_MINUTES =
+  A50_TRADING_SESSION.breakEndMinute - A50_TRADING_SESSION.breakStartMinute;
 
 function parseTrendRow(row: string): TrendRow | null {
   const values = row.split(",");
@@ -210,6 +214,8 @@ function futuresTrendFromPayload(
   market: MarketKind,
   data: NonNullable<TrendPayload["data"]>,
 ): Trend | null {
+  const totalMinutes =
+    market === "brent" ? BRENT_TRADING_SESSION.totalMinutes : FUTURES_TOTAL_MINUTES;
   const rows: TrendRow[] = [];
   for (const row of data.trends ?? []) {
     const parsed = parseTrendRow(row);
@@ -217,8 +223,8 @@ function futuresTrendFromPayload(
   }
   if (rows.length === 0) return null;
 
-  // A session runs 23 hours and crosses midnight, so split on the maintenance
-  // break gap rather than on the calendar date.
+  // A session crosses midnight and ends with a multi-hour break, so split on
+  // that gap rather than on the calendar date.
   let sessionStart = 0;
   for (let index = 1; index < rows.length; index += 1) {
     const gap = rows[index].absoluteMinute - rows[index - 1].absoluteMinute;
@@ -231,7 +237,7 @@ function futuresTrendFromPayload(
     const row = rows[index];
     const minute = Math.max(
       0,
-      Math.min(FUTURES_TOTAL_MINUTES, row.absoluteMinute - start.absoluteMinute),
+      Math.min(totalMinutes, row.absoluteMinute - start.absoluteMinute),
     );
     const point = pointFromRow(row, minute);
     if (point) points.push(point);
@@ -246,11 +252,69 @@ function futuresTrendFromPayload(
   return { secid, market, tradeDate: start.date, preClose, points };
 }
 
+function nextDate(date: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return date;
+  const stamp =
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) + 86400000;
+  return new Date(stamp).toISOString().slice(0, 10);
+}
+
+function a50TrendFromPayload(
+  secid: string,
+  market: MarketKind,
+  data: NonNullable<TrendPayload["data"]>,
+): Trend | null {
+  const rows: TrendRow[] = [];
+  for (const row of data.trends ?? []) {
+    const parsed = parseTrendRow(row);
+    if (parsed) rows.push(parsed);
+  }
+  if (rows.length === 0) return null;
+
+  // Two-day responses carry the previous trading day as well; every A50
+  // trading day begins with the 16:45 overnight tick.
+  let sessionStart = 0;
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    if (rows[index].absoluteMinute % 1440 === A50_TRADING_SESSION.startMinute) {
+      sessionStart = index;
+      break;
+    }
+  }
+
+  const start = rows[sessionStart];
+  const points: TrendPoint[] = [];
+  for (let index = sessionStart; index < rows.length; index += 1) {
+    const row = rows[index];
+    const elapsed = row.absoluteMinute - start.absoluteMinute;
+    if (elapsed < 0) continue;
+    // Skip the 05:15–09:00 pause so overnight and day sessions share one axis.
+    const minute =
+      elapsed <= A50_OVERNIGHT_MINUTES ? elapsed : elapsed - A50_BREAK_MINUTES;
+    const point = pointFromRow(
+      row,
+      Math.max(0, Math.min(A50_TRADING_SESSION.totalMinutes, minute)),
+    );
+    if (point) points.push(point);
+  }
+  if (points.length === 0) return null;
+
+  const preClose =
+    typeof data.preClose === "number" && data.preClose > 0
+      ? data.preClose
+      : points[0].open;
+
+  return { secid, market, tradeDate: nextDate(start.date), preClose, points };
+}
+
 function trendFromPayload(secid: string, payload: TrendPayload): Trend | null {
   const data = payload.data;
   if (!data?.trends?.length) return null;
   const market = marketOfSecid(secid);
-  if (market === "fut") return futuresTrendFromPayload(secid, market, data);
+  if (market === "a50") return a50TrendFromPayload(secid, market, data);
+  if (market === "fut" || market === "brent") {
+    return futuresTrendFromPayload(secid, market, data);
+  }
 
   const datedRows = data.trends.filter((row) => row.includes(" "));
   const latestDate = datedRows.length > 0
@@ -309,7 +373,10 @@ async function requestTrend(
 
 export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<Trend | null> {
   const market = marketOfSecid(secid);
-  const primary = market === "cn" || market === "fut" ? TREND_ENDPOINT : TREND_DELAY_ENDPOINT;
+  const primary =
+    market === "cn" || market === "fut" || market === "a50" || market === "brent"
+      ? TREND_ENDPOINT
+      : TREND_DELAY_ENDPOINT;
 
   try {
     const trend = await requestTrend(primary, secid, 1, signal);

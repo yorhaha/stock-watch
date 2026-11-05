@@ -3,18 +3,45 @@ import type { MarketKind, Quote, SessionInfo, SortMode, StockRef, Trend } from "
 export const MARKET_TIME_ZONE = "Asia/Shanghai";
 
 export const WATCHLIST_LIMIT = 30;
-export const INDEX_LIMIT = 6;
+export const INDEX_LIMIT = 9;
 
 export interface MarketProfile {
   totalMinutes: number;
   axisLabels: [string, string, string];
 }
 
+// SGX A50 futures open their trading day with the overnight session at 16:45,
+// pause 05:15–09:00, then run the day session until 16:30. Chart minutes skip
+// the overnight pause the same way A-share charts skip the lunch break.
+export const A50_TRADING_SESSION = {
+  startMinute: 16 * 60 + 45,
+  breakStartMinute: 5 * 60 + 15,
+  breakEndMinute: 9 * 60,
+  totalMinutes: 1200,
+  axisLabels: ["16:45", "02:45", "16:30"] as [string, string, string],
+};
+
+// ICE Brent trades 01:00–23:00 London time, a 22-hour session that crosses
+// midnight on the Beijing clock. The clock shifts with UK daylight saving, so
+// the chart derives its axis labels from the first tick of the session.
+export const BRENT_TRADING_SESSION = {
+  totalMinutes: 22 * 60,
+  axisLabels: ["09:00", "20:00", "07:00"] as [string, string, string],
+};
+
 export const MARKET_PROFILES: Record<MarketKind, MarketProfile> = {
   cn: { totalMinutes: 240, axisLabels: ["09:30", "11:30 / 13:00", "15:00"] },
   hk: { totalMinutes: 330, axisLabels: ["09:30", "12:00 / 13:00", "16:00"] },
   kr: { totalMinutes: 390, axisLabels: ["08:00", "11:15", "14:30"] },
   fut: { totalMinutes: 1380, axisLabels: ["07:00", "18:30", "06:00"] },
+  a50: {
+    totalMinutes: A50_TRADING_SESSION.totalMinutes,
+    axisLabels: A50_TRADING_SESSION.axisLabels,
+  },
+  brent: {
+    totalMinutes: BRENT_TRADING_SESSION.totalMinutes,
+    axisLabels: BRENT_TRADING_SESSION.axisLabels,
+  },
 };
 
 export const DEFAULT_STOCKS: StockRef[] = [
@@ -55,6 +82,8 @@ export const INDEX_CATALOG: StockRef[] = [
   { secid: "100.KOSPI200", code: "KOSPI200", name: "韩国KOSPI200" },
   { secid: "103.NQ00Y", code: "NQ00Y", name: "小型纳指当月连续" },
   { secid: "101.GC00Y", code: "GC00Y", name: "COMEX黄金" },
+  { secid: "112.B00Y", code: "B00Y", name: "布伦特原油当月连续" },
+  { secid: "104.CN00Y", code: "CN00Y", name: "A50期指当月连续" },
 ];
 
 export const POPULAR_STOCKS: StockRef[] = [
@@ -184,6 +213,7 @@ export function getMarketSession(now = new Date()): SessionInfo {
     isHongKongTrading: isHongKongMarketOpen(now),
     isKoreanTrading: isKoreanMarketOpen(now),
     isFuturesTrading: isFuturesMarketOpen(now),
+    isBrentTrading: isBrentMarketOpen(now),
     clock,
     dateLabel,
     weekday: weekdayMap[weekday] ?? "",
@@ -201,17 +231,25 @@ export function isKoreanMarketOpen(now = new Date()): boolean {
   return isTradingWindow(now, [[8 * 60, 14 * 60 + 30]]);
 }
 
-function usEasternOffsetMinutes(now: Date): number {
+function zoneOffsetMinutes(now: Date, timeZone: string, fallback: number): number {
   const zone = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
+    timeZone,
     timeZoneName: "longOffset",
   })
     .formatToParts(now)
     .find((part) => part.type === "timeZoneName")?.value;
   const match = zone ? /^GMT([+-])(\d{2}):(\d{2})$/.exec(zone) : null;
-  if (!match) return -5 * 60;
+  if (!match) return fallback;
   const sign = match[1] === "-" ? -1 : 1;
   return sign * (Number(match[2]) * 60 + Number(match[3]));
+}
+
+function usEasternOffsetMinutes(now: Date): number {
+  return zoneOffsetMinutes(now, "America/New_York", -5 * 60);
+}
+
+function londonOffsetMinutes(now: Date): number {
+  return zoneOffsetMinutes(now, "Europe/London", 0);
 }
 
 function futuresSessionBounds(now: Date): { open: number; close: number } {
@@ -222,15 +260,33 @@ function futuresSessionBounds(now: Date): { open: number; close: number } {
   };
 }
 
-export function isFuturesMarketOpen(now = new Date()): boolean {
+function brentSessionBounds(now: Date): { open: number; close: number } {
+  const beijing = 8 * 60 - londonOffsetMinutes(now);
+  return {
+    open: (1 * 60 + beijing) % 1440,
+    close: (23 * 60 + beijing) % 1440,
+  };
+}
+
+function isOvernightSessionOpen(
+  now: Date,
+  bounds: { open: number; close: number },
+): boolean {
   const parts = readParts(now);
   const weekday = parts.weekday ?? "Mon";
   const minutes = Number(parts.hour ?? "0") * 60 + Number(parts.minute ?? "0");
-  const { open, close } = futuresSessionBounds(now);
   const isWeekday = weekday !== "Sat" && weekday !== "Sun";
-  if (isWeekday && minutes >= open) return true;
+  if (isWeekday && minutes >= bounds.open) return true;
   const isOvernight = weekday !== "Sun" && weekday !== "Mon";
-  return isOvernight && minutes < close;
+  return isOvernight && minutes < bounds.close;
+}
+
+export function isFuturesMarketOpen(now = new Date()): boolean {
+  return isOvernightSessionOpen(now, futuresSessionBounds(now));
+}
+
+export function isBrentMarketOpen(now = new Date()): boolean {
+  return isOvernightSessionOpen(now, brentSessionBounds(now));
 }
 
 function minuteOfTime(value: string): number {
@@ -267,7 +323,13 @@ function clockFromMinute(value: number): string {
 
 export function marketProfileFor(trend?: Trend | null): MarketProfile {
   const profile = MARKET_PROFILES[trend?.market ?? "cn"];
-  if (trend?.market !== "fut" || trend.points.length === 0) return profile;
+  if (
+    !trend ||
+    (trend.market !== "fut" && trend.market !== "brent") ||
+    trend.points.length === 0
+  ) {
+    return profile;
+  }
   const start = minuteOfTime(trend.points[0].time);
   return {
     totalMinutes: profile.totalMinutes,
@@ -364,11 +426,15 @@ export function isIndexCode(code: string): boolean {
 
 const HONG_KONG_INDEX_SECIDS = new Set(["100.HSI", "124.HSTECH"]);
 const KOREAN_INDEX_SECIDS = new Set(["100.KS11", "100.KOSPI200"]);
+const A50_INDEX_SECIDS = new Set(["104.CN00Y"]);
+const BRENT_INDEX_SECIDS = new Set(["112.B00Y"]);
 const FUTURES_INDEX_SECIDS = new Set(["103.NQ00Y", "101.GC00Y"]);
 
 export function marketOfSecid(secid: string): MarketKind {
   if (HONG_KONG_INDEX_SECIDS.has(secid)) return "hk";
   if (KOREAN_INDEX_SECIDS.has(secid)) return "kr";
+  if (A50_INDEX_SECIDS.has(secid)) return "a50";
+  if (BRENT_INDEX_SECIDS.has(secid)) return "brent";
   if (FUTURES_INDEX_SECIDS.has(secid)) return "fut";
   return "cn";
 }
@@ -381,8 +447,16 @@ export function isKoreanIndex(secid: string): boolean {
   return KOREAN_INDEX_SECIDS.has(secid);
 }
 
+export function isBrentIndex(secid: string): boolean {
+  return BRENT_INDEX_SECIDS.has(secid);
+}
+
 export function isFuturesIndex(secid: string): boolean {
-  return FUTURES_INDEX_SECIDS.has(secid);
+  return (
+    FUTURES_INDEX_SECIDS.has(secid) ||
+    A50_INDEX_SECIDS.has(secid) ||
+    BRENT_INDEX_SECIDS.has(secid)
+  );
 }
 
 export function isSupportedIndex(secid: string, code: string): boolean {

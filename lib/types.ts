@@ -31,7 +31,7 @@ export interface TrendPoint {
   volume: number;
 }
 
-export type MarketKind = "cn" | "hk" | "kr" | "fut";
+export type MarketKind = "cn" | "hk" | "kr" | "fut" | "a50" | "brent";
 
 export interface Trend {
   secid: string;
@@ -84,6 +84,7 @@ export interface SessionInfo {
   isHongKongTrading: boolean;
   isKoreanTrading: boolean;
   isFuturesTrading: boolean;
+  isBrentTrading: boolean;
   clock: string;
   dateLabel: string;
   weekday: string;

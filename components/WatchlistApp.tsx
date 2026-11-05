@@ -10,6 +10,7 @@ import {
   WATCHLIST_LIMIT,
   formatSyncTime,
   formatTradeDate,
+  isBrentIndex,
   isFuturesIndex,
   isHongKongIndex,
   isKoreanIndex,
@@ -68,12 +69,17 @@ export function WatchlistApp() {
     () => indices.some((index) => isFuturesIndex(index.secid)),
     [indices],
   );
+  const hasBrentIndex = useMemo(
+    () => indices.some((index) => isBrentIndex(index.secid)),
+    [indices],
+  );
   const activeMarket =
     session.isTrading ||
     session.isAuction ||
     (hasHongKongIndex && session.isHongKongTrading) ||
     (hasKoreanIndex && session.isKoreanTrading) ||
-    (hasFuturesIndex && session.isFuturesTrading);
+    (hasFuturesIndex && session.isFuturesTrading) ||
+    (hasBrentIndex && session.isBrentTrading);
   const { quotes, trends, status, error, lastSyncedAt, refresh } = useMarketData(
     stockSecids,
     indexSecids,
