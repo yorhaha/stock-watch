@@ -38,6 +38,24 @@ export interface Trend {
   points: TrendPoint[];
 }
 
+export interface Candle {
+  date: string;
+  open: number;
+  close: number;
+  high: number;
+  low: number;
+  volume: number;
+  amount: number;
+  pct: number | null;
+}
+
+export interface KlinePoint extends Candle {
+  ma5: number | null;
+  ma10: number | null;
+  t70: number | null;
+  t30: number | null;
+}
+
 export interface SearchStock extends StockRef {
   alreadyAdded?: boolean;
 }

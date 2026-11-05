@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   formatAmount,
   formatDelta,
@@ -9,6 +9,7 @@ import {
   toneOf,
 } from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
+import { DailyKChart } from "./DailyKChart";
 import { DetailChart } from "./DetailChart";
 import { BookmarkIcon, CloseIcon } from "./Icons";
 
@@ -33,6 +34,7 @@ export function StockDetailSheet({
   const closeRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const [view, setView] = useState<"intraday" | "daily">("intraday");
   onCloseRef.current = onClose;
   const titleId = useId();
   const name = quote?.name || stock.name;
@@ -125,18 +127,61 @@ export function StockDetailSheet({
 
         <div className="detail-sheet-body">
           <div className="detail-head">
-            <span className="detail-legends">
-              <span className="legend">
-                <i className="legend-line price" />
-                价格
+            <div className="segmented detail-view-switch" role="group" aria-label="图表周期">
+              <button
+                type="button"
+                className={view === "intraday" ? "is-selected" : ""}
+                aria-pressed={view === "intraday"}
+                onClick={() => setView("intraday")}
+              >
+                分时
+              </button>
+              <button
+                type="button"
+                className={view === "daily" ? "is-selected" : ""}
+                aria-pressed={view === "daily"}
+                onClick={() => setView("daily")}
+              >
+                日K
+              </button>
+            </div>
+            {view === "intraday" ? (
+              <span className="detail-legends">
+                <span className="legend">
+                  <i className="legend-line price" />
+                  价格
+                </span>
+                <span className="legend">
+                  <i className="legend-line average" />
+                  均价
+                </span>
               </span>
-              <span className="legend">
-                <i className="legend-line average" />
-                均价
+            ) : (
+              <span className="detail-legends">
+                <span className="legend">
+                  <i className="legend-line ma5" />
+                  MA5
+                </span>
+                <span className="legend">
+                  <i className="legend-line ma10" />
+                  MA10
+                </span>
+                <span className="legend">
+                  <i className="legend-line t70" />
+                  T70
+                </span>
+                <span className="legend">
+                  <i className="legend-line t30" />
+                  T30
+                </span>
               </span>
-            </span>
+            )}
           </div>
-          <DetailChart trend={trend} quote={quote} name={name} code={code} />
+          {view === "intraday" ? (
+            <DetailChart trend={trend} quote={quote} name={name} code={code} />
+          ) : (
+            <DailyKChart secid={stock.secid} name={name} code={code} />
+          )}
           <div className="detail-stats">
             <div className="stat">
               <span className="stat-label">今开</span>

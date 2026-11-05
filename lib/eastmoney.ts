@@ -1,9 +1,10 @@
 import { isFundCode, isIndexCode, isWatchlistCode, tradingMinuteFromTime } from "./market";
-import type { Quote, SearchStock, Trend, TrendPoint } from "./types";
+import type { Candle, Quote, SearchStock, Trend, TrendPoint } from "./types";
 
 const QUOTE_ENDPOINT = "https://push2.eastmoney.com/api/qt/ulist.np/get";
 const TREND_ENDPOINT = "https://push2.eastmoney.com/api/qt/stock/trends2/get";
 const TREND_HISTORY_ENDPOINT = "https://push2his.eastmoney.com/api/qt/stock/trends2/get";
+const KLINE_ENDPOINT = "https://push2his.eastmoney.com/api/qt/stock/kline/get";
 const SEARCH_ENDPOINT = "https://searchapi.eastmoney.com/api/suggest/get";
 const SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E326E8";
 
@@ -181,6 +182,74 @@ export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<T
     signal,
   )) as TrendPayload;
   return trendFromPayload(secid, payload);
+}
+
+interface KlinePayload {
+  data?: {
+    klines?: string[];
+  } | null;
+}
+
+async function fetchKlineJson(url: string, signal?: AbortSignal): Promise<unknown> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await fetchJson(url, signal);
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      lastError = error;
+      if (attempt < 2) {
+        await new Promise((resolve) => window.setTimeout(resolve, attempt === 0 ? 300 : 800));
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+      }
+    }
+  }
+  throw lastError;
+}
+
+export async function fetchDailyKline(
+  secid: string,
+  signal?: AbortSignal,
+): Promise<Candle[]> {
+  const params = new URLSearchParams({
+    secid,
+    fields1: "f1,f2,f3,f4,f5,f6",
+    fields2: "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",
+    klt: "101",
+    fqt: "1",
+    end: "20500101",
+    lmt: "260",
+    _: String(Date.now()),
+  });
+  const payload = (await fetchKlineJson(
+    `${KLINE_ENDPOINT}?${params.toString()}`,
+    signal,
+  )) as KlinePayload;
+
+  const candles: Candle[] = [];
+  for (const row of payload.data?.klines ?? []) {
+    const values = row.split(",");
+    if (values.length < 9) continue;
+    const [date, openValue, closeValue, highValue, lowValue, volumeValue, amountValue, , pctValue] =
+      values;
+    const open = numeric(openValue);
+    const close = numeric(closeValue);
+    const high = numeric(highValue);
+    const low = numeric(lowValue);
+    if (!date || open == null || close == null || high == null || low == null) continue;
+    candles.push({
+      date,
+      open,
+      close,
+      high,
+      low,
+      volume: numeric(volumeValue) ?? 0,
+      amount: numeric(amountValue) ?? 0,
+      pct: numeric(pctValue),
+    });
+  }
+  if (candles.length === 0) throw new Error("日K数据暂不可用");
+  return candles;
 }
 
 let jsonpSequence = 0;
