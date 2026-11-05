@@ -22,7 +22,6 @@ import {
   PlusIcon,
   RefreshIcon,
   SettingsIcon,
-  SortIcon,
 } from "./Icons";
 import { IndexManagerDialog } from "./IndexManagerDialog";
 import { IndexStrip } from "./IndexStrip";
@@ -258,16 +257,6 @@ export function WatchlistApp() {
     setDragOver(null);
   }, [editing, setSort]);
 
-  const cycleSort = useCallback(() => {
-    setSort(
-      preferences.sort === "manual"
-        ? "change-desc"
-        : preferences.sort === "change-desc"
-          ? "change-asc"
-          : "manual",
-    );
-  }, [preferences.sort, setSort]);
-
   const openIndexManager = useCallback(() => {
     setSettingsOpen(false);
     setIndexManagerOpen(true);
@@ -367,13 +356,6 @@ export function WatchlistApp() {
     [dragIndex, move],
   );
 
-  const sortTitle =
-    preferences.sort === "manual"
-      ? "按涨跌幅排序"
-      : preferences.sort === "change-desc"
-        ? "涨跌幅从高到低，点击切换为从低到高"
-        : "涨跌幅从低到高，点击恢复自选顺序";
-
   return (
     <div
       className="app-shell"
@@ -435,12 +417,14 @@ export function WatchlistApp() {
                   open={settingsOpen}
                   preferences={preferences}
                   indexCount={indices.length}
+                  sortLocked={editing}
                   onClose={closeSettings}
                   onTheme={setTheme}
                   onRefresh={setRefreshMs}
                   onShowPrice={setShowPrice}
                   onChangeBackground={setChangeBackground}
                   onLayout={setLayout}
+                  onSort={setSort}
                   onShowIndexValue={setShowIndexValue}
                   onManageIndices={openIndexManager}
                 />
@@ -492,26 +476,6 @@ export function WatchlistApp() {
               )}
             </button>
             <div className="toolbar-actions">
-              {!editing ? (
-                <button
-                  type="button"
-                  className={`sort-button ${preferences.sort !== "manual" ? "is-active" : ""}`}
-                  onClick={cycleSort}
-                  title={sortTitle}
-                  aria-label={sortTitle}
-                  aria-pressed={preferences.sort !== "manual"}
-                  data-sort={preferences.sort}
-                >
-                  <SortIcon size={13} />
-                  <span>
-                    {preferences.sort === "manual"
-                      ? "涨跌幅"
-                      : preferences.sort === "change-desc"
-                        ? "涨跌幅 ↓"
-                        : "涨跌幅 ↑"}
-                  </span>
-                </button>
-              ) : null}
               <button
                 type="button"
                 className={`icon-button ${editing ? "is-active" : ""}`}

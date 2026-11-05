@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { LayoutMode, Preferences, ThemeMode } from "@/lib/types";
+import type { LayoutMode, Preferences, SortMode, ThemeMode } from "@/lib/types";
 import { ChevronRightIcon } from "./Icons";
 
 interface SettingsPopoverProps {
   open: boolean;
   preferences: Preferences;
+  sortLocked?: boolean;
   onClose: () => void;
   onTheme: (theme: ThemeMode) => void;
   onRefresh: (refreshMs: number) => void;
   onShowPrice: (showPrice: boolean) => void;
   onChangeBackground: (enabled: boolean) => void;
   onLayout: (layout: LayoutMode) => void;
+  onSort: (sort: SortMode) => void;
   onShowIndexValue: (show: boolean) => void;
   onManageIndices: () => void;
   indexCount: number;
@@ -26,15 +28,23 @@ const themeOptions: { value: ThemeMode; label: string }[] = [
 
 const refreshOptions = [3000, 5000, 10000];
 
+const sortOptions: { value: SortMode; label: string; hint: string }[] = [
+  { value: "manual", label: "自选", hint: "按自选顺序" },
+  { value: "change-desc", label: "涨跌幅 ↓", hint: "按涨跌幅从高到低" },
+  { value: "change-asc", label: "涨跌幅 ↑", hint: "按涨跌幅从低到高" },
+];
+
 export function SettingsPopover({
   open,
   preferences,
+  sortLocked = false,
   onClose,
   onTheme,
   onRefresh,
   onShowPrice,
   onChangeBackground,
   onLayout,
+  onSort,
   onShowIndexValue,
   onManageIndices,
   indexCount,
@@ -197,6 +207,25 @@ export function SettingsPopover({
               <i />
             </span>
           </button>
+        </div>
+      </div>
+
+      <div className="settings-row">
+        <span className="settings-label">排序</span>
+        <div className="segmented" role="group" aria-label="自选排序">
+          {sortOptions.map((option) => (
+            <button
+              type="button"
+              key={option.value}
+              className={preferences.sort === option.value ? "is-selected" : ""}
+              aria-label={option.hint}
+              aria-pressed={preferences.sort === option.value}
+              disabled={sortLocked}
+              onClick={() => onSort(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 
