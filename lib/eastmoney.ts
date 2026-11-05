@@ -192,14 +192,16 @@ interface KlinePayload {
 
 async function fetchKlineJson(url: string, signal?: AbortSignal): Promise<unknown> {
   let lastError: unknown;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  const backoff = [250, 600, 1200, 2000];
+  for (let attempt = 0; attempt <= backoff.length; attempt += 1) {
     try {
       return await fetchJson(url, signal);
     } catch (error) {
       if (signal?.aborted) throw error;
       lastError = error;
-      if (attempt < 2) {
-        await new Promise((resolve) => window.setTimeout(resolve, attempt === 0 ? 300 : 800));
+      if (attempt < backoff.length) {
+        const delay = backoff[attempt] + Math.random() * 250;
+        await new Promise((resolve) => window.setTimeout(resolve, delay));
         if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
       }
     }
