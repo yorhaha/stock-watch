@@ -1,11 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { useIndices } from "@/hooks/useIndices";
 import { useMarketData } from "@/hooks/useMarketData";
 import { useMarketSession } from "@/hooks/useMarketSession";
 import { usePreferences } from "@/hooks/usePreferences";
 import { useWatchlist } from "@/hooks/useWatchlist";
-import { MARKET_INDICES, formatSyncTime, formatTradeDate } from "@/lib/market";
+import {
+  WATCHLIST_LIMIT,
+  formatSyncTime,
+  formatTradeDate,
+  sortStocksByChange,
+} from "@/lib/market";
 import type { StockRef } from "@/lib/types";
 import { AddStockDialog } from "./AddStockDialog";
 import {
@@ -15,7 +21,9 @@ import {
   PlusIcon,
   RefreshIcon,
   SettingsIcon,
+  SortIcon,
 } from "./Icons";
+import { IndexManagerDialog } from "./IndexManagerDialog";
 import { IndexStrip } from "./IndexStrip";
 import { MarketClock } from "./MarketClock";
 import { SettingsPopover } from "./SettingsPopover";
@@ -30,7 +38,9 @@ interface Toast {
 }
 
 export function WatchlistApp() {
-  const { stocks, hydrated, add, insert, remove, move } = useWatchlist();
+  const { stocks, hydrated, add, addMany, insert, remove, move } = useWatchlist();
+  const { indices, add: addIndex, remove: removeIndex, move: moveIndex, replace: replaceIndices } =
+    useIndices();
   const {
     preferences,
     setTheme,
@@ -39,11 +49,13 @@ export function WatchlistApp() {
     setShowPrice,
     setChangeBackground,
     setLayout,
+    setSort,
+    setShowIndexValue,
   } = usePreferences();
   const session = useMarketSession();
 
   const stockSecids = useMemo(() => stocks.map((stock) => stock.secid), [stocks]);
-  const indexSecids = useMemo(() => MARKET_INDICES.map((index) => index.secid), []);
+  const indexSecids = useMemo(() => indices.map((index) => index.secid), [indices]);
   const activeMarket = session.isTrading || session.isAuction;
   const { quotes, trends, status, error, lastSyncedAt, refresh } = useMarketData(
     stockSecids,
@@ -51,12 +63,17 @@ export function WatchlistApp() {
     activeMarket,
     preferences.refreshMs,
   );
+  const displayStocks = useMemo(
+    () => sortStocksByChange(stocks, quotes, preferences.sort),
+    [stocks, quotes, preferences.sort],
+  );
 
   const [focusedSecid, setFocusedSecid] = useState<string | null>(null);
   const [detailSecid, setDetailSecid] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [indexManagerOpen, setIndexManagerOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
@@ -95,7 +112,7 @@ export function WatchlistApp() {
         ? "行情连接中断"
         : `行情更新至 ${dataTimeLabel}`;
   const hasStatusAlert = status === "stale" || status === "error";
-  const modalOpen = dialogOpen || detailStock !== null;
+  const modalOpen = dialogOpen || detailStock !== null || indexManagerOpen;
 
   const closeDetail = useCallback(() => setDetailSecid(null), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
@@ -143,11 +160,15 @@ export function WatchlistApp() {
 
   const handleRemove = useCallback(
     (stock: StockRef) => {
-      const index = stocks.findIndex((item) => item.secid === stock.secid);
-      if (index === -1) return;
+      const rawIndex = stocks.findIndex((item) => item.secid === stock.secid);
+      if (rawIndex === -1) return;
+      const displayIndex = displayStocks.findIndex((item) => item.secid === stock.secid);
       remove(stock.secid);
       if (focusedSecid === stock.secid) {
-        const next = stocks[index + 1] ?? stocks[index - 1];
+        const next =
+          displayStocks[displayIndex + 1] ??
+          displayStocks[displayIndex - 1] ??
+          null;
         setFocusedSecid(next?.secid ?? null);
       }
       if (detailSecid === stock.secid) setDetailSecid(null);
@@ -156,16 +177,16 @@ export function WatchlistApp() {
         id: toastId.current,
         message: `已移除 ${stock.name}`,
         stock,
-        index,
+        index: rawIndex,
       });
     },
-    [stocks, remove, focusedSecid, detailSecid],
+    [stocks, displayStocks, remove, focusedSecid, detailSecid],
   );
 
   const handleUndo = useCallback(() => {
     if (!toast?.stock) return;
-    if (stocks.length >= 30) {
-      showToast("自选最多 30 只");
+    if (stocks.length >= WATCHLIST_LIMIT) {
+      showToast(`自选最多 ${WATCHLIST_LIMIT} 只`);
       return;
     }
     insert(toast.stock, toast.index ?? stocks.length);
@@ -179,8 +200,8 @@ export function WatchlistApp() {
         showToast(`${stock.name} 已在自选中`);
         return;
       }
-      if (stocks.length >= 30) {
-        showToast("自选最多 30 只");
+      if (stocks.length >= WATCHLIST_LIMIT) {
+        showToast(`自选最多 ${WATCHLIST_LIMIT} 只`);
         return;
       }
       add(stock);
@@ -191,30 +212,69 @@ export function WatchlistApp() {
     [stocks, add, showToast],
   );
 
+  const handleBatchImport = useCallback(
+    (incoming: StockRef[]) => {
+      const existing = new Set(stocks.map((stock) => stock.secid));
+      const room = Math.max(0, WATCHLIST_LIMIT - stocks.length);
+      const fresh = incoming
+        .filter((stock) => !existing.has(stock.secid))
+        .slice(0, room);
+      setDialogOpen(false);
+      if (fresh.length === 0) {
+        showToast("没有可导入的股票");
+        return;
+      }
+      addMany(fresh);
+      setFocusedSecid(fresh[0].secid);
+      setDetailSecid(null);
+      showToast(fresh.length === 1 ? `已导入 ${fresh[0].name}` : `已导入 ${fresh.length} 只股票`);
+    },
+    [stocks, addMany, showToast],
+  );
+
   const handleEditing = useCallback(() => {
-    setEditing((current) => {
-      if (!current) setDetailSecid(null);
-      return !current;
-    });
+    if (!editing) setSort("manual");
+    setEditing(!editing);
     setDragIndex(null);
     setDragOver(null);
+  }, [editing, setSort]);
+
+  const cycleSort = useCallback(() => {
+    setSort(
+      preferences.sort === "manual"
+        ? "change-desc"
+        : preferences.sort === "change-desc"
+          ? "change-asc"
+          : "manual",
+    );
+  }, [preferences.sort, setSort]);
+
+  const openIndexManager = useCallback(() => {
+    setSettingsOpen(false);
+    setIndexManagerOpen(true);
   }, []);
+
+  const sortIndicesByChange = useCallback(() => {
+    replaceIndices(sortStocksByChange(indices, quotes, "change-desc"));
+  }, [indices, quotes, replaceIndices]);
 
   const focusRelative = useCallback(
     (direction: 1 | -1) => {
       setFocusedSecid((current) => {
-        if (stocks.length === 0) return null;
+        if (displayStocks.length === 0) return null;
         const index = current
-          ? stocks.findIndex((stock) => stock.secid === current)
+          ? displayStocks.findIndex((stock) => stock.secid === current)
           : -1;
         if (index === -1) {
-          return direction === 1 ? stocks[0].secid : stocks[stocks.length - 1].secid;
+          return direction === 1
+            ? displayStocks[0].secid
+            : displayStocks[displayStocks.length - 1].secid;
         }
-        const next = Math.max(0, Math.min(stocks.length - 1, index + direction));
-        return stocks[next].secid;
+        const next = Math.max(0, Math.min(displayStocks.length - 1, index + direction));
+        return displayStocks[next].secid;
       });
     },
-    [stocks],
+    [displayStocks],
   );
 
   useEffect(() => {
@@ -226,7 +286,7 @@ export function WatchlistApp() {
         target?.tagName === "SELECT" ||
         target?.isContentEditable;
 
-      if (detailSecid) return;
+      if (detailSecid || indexManagerOpen) return;
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -234,7 +294,7 @@ export function WatchlistApp() {
         setDialogOpen(true);
         return;
       }
-      if (typing || dialogOpen || settingsOpen || detailSecid) return;
+      if (typing || dialogOpen || settingsOpen) return;
 
       if (event.key === "/" && !event.metaKey && !event.ctrlKey) {
         event.preventDefault();
@@ -259,12 +319,10 @@ export function WatchlistApp() {
   }, [
     dialogOpen,
     settingsOpen,
+    indexManagerOpen,
     editing,
-    focusedSecid,
     detailSecid,
-    stocks,
     focusRelative,
-    openDetail,
   ]);
 
   const onDragStart = useCallback((index: number) => {
@@ -290,6 +348,13 @@ export function WatchlistApp() {
     [dragIndex, move],
   );
 
+  const sortTitle =
+    preferences.sort === "manual"
+      ? "按涨跌幅排序"
+      : preferences.sort === "change-desc"
+        ? "涨跌幅从高到低，点击切换为从低到高"
+        : "涨跌幅从低到高，点击恢复自选顺序";
+
   return (
     <div
       className="app-shell"
@@ -297,9 +362,12 @@ export function WatchlistApp() {
       data-market-phase={session.phase}
       data-status={status}
       data-watchlist-count={stocks.length}
+      data-index-count={indices.length}
       data-show-price={preferences.showPrice ? "true" : "false"}
+      data-show-index-value={preferences.showIndexValue ? "true" : "false"}
       data-change-bg={preferences.changeBackground ? "true" : "false"}
       data-layout={preferences.layout}
+      data-sort={preferences.sort}
       data-detail-open={detailSecid ? "true" : "false"}
     >
       <a className="skip-link" href="#watchlist">
@@ -325,60 +393,58 @@ export function WatchlistApp() {
               </span>
               <span className="brand-name">Tape</span>
             </a>
+            <span className="brand-divider" aria-hidden="true" />
+            <h1 className="topbar-title">自选</h1>
           </div>
 
           <div className="topbar-actions">
-            <div className="settings-anchor">
+            <MarketClock session={session} />
+            <div className="topbar-tools">
+              <div className="settings-anchor">
+                <button
+                  type="button"
+                  className={`icon-button ${settingsOpen ? "is-active" : ""}`}
+                  data-settings-trigger
+                  onClick={() => setSettingsOpen((current) => !current)}
+                  aria-label="设置"
+                  aria-expanded={settingsOpen}
+                  title="设置"
+                >
+                  <SettingsIcon size={17} />
+                </button>
+                <SettingsPopover
+                  open={settingsOpen}
+                  preferences={preferences}
+                  indexCount={indices.length}
+                  onClose={closeSettings}
+                  onTheme={setTheme}
+                  onColors={setColors}
+                  onRefresh={setRefreshMs}
+                  onShowPrice={setShowPrice}
+                  onChangeBackground={setChangeBackground}
+                  onLayout={setLayout}
+                  onShowIndexValue={setShowIndexValue}
+                  onManageIndices={openIndexManager}
+                />
+              </div>
               <button
                 type="button"
-                className={`icon-button ${settingsOpen ? "is-active" : ""}`}
-                data-settings-trigger
-                onClick={() => setSettingsOpen((current) => !current)}
-                aria-label="设置"
-                aria-expanded={settingsOpen}
-                title="设置"
+                className="add-button"
+                onClick={() => setDialogOpen(true)}
+                aria-label="添加自选"
+                title="添加自选"
               >
-                <SettingsIcon size={17} />
+                <PlusIcon size={17} />
               </button>
-              <SettingsPopover
-                open={settingsOpen}
-                preferences={preferences}
-                onClose={closeSettings}
-                onTheme={setTheme}
-                onColors={setColors}
-                onRefresh={setRefreshMs}
-                onShowPrice={setShowPrice}
-                onChangeBackground={setChangeBackground}
-                onLayout={setLayout}
-              />
             </div>
-            <button
-              type="button"
-              className="add-button"
-              onClick={() => setDialogOpen(true)}
-              aria-label="添加股票"
-              title="添加股票"
-            >
-              <PlusIcon size={17} />
-            </button>
           </div>
         </div>
       </header>
 
       <main className="page" inert={modalOpen ? true : undefined}>
-        <section className="hero">
-          <h1 className="hero-title">
-            自选
-            <span className="title-count" title={`${stocks.length} 只股票`}>
-              {stocks.length}
-            </span>
-          </h1>
-          <MarketClock session={session} />
-        </section>
+        <IndexStrip indices={indices} quotes={quotes} trends={trends} showValues={preferences.showIndexValue} />
 
-        <IndexStrip indices={MARKET_INDICES} quotes={quotes} trends={trends} />
-
-        <section className="watchlist-section" id="watchlist" aria-label="自选股票">
+        <section className="watchlist-section" id="watchlist" aria-label="自选">
           <div className="watchlist-toolbar">
             <button
               type="button"
@@ -402,6 +468,26 @@ export function WatchlistApp() {
               )}
             </button>
             <div className="toolbar-actions">
+              {!editing ? (
+                <button
+                  type="button"
+                  className={`sort-button ${preferences.sort !== "manual" ? "is-active" : ""}`}
+                  onClick={cycleSort}
+                  title={sortTitle}
+                  aria-label={sortTitle}
+                  aria-pressed={preferences.sort !== "manual"}
+                  data-sort={preferences.sort}
+                >
+                  <SortIcon size={13} />
+                  <span>
+                    {preferences.sort === "manual"
+                      ? "涨跌幅"
+                      : preferences.sort === "change-desc"
+                        ? "涨跌幅 ↓"
+                        : "涨跌幅 ↑"}
+                  </span>
+                </button>
+              ) : null}
               <button
                 type="button"
                 className={`icon-button ${editing ? "is-active" : ""}`}
@@ -439,7 +525,7 @@ export function WatchlistApp() {
               data-editing={editing}
               data-layout={preferences.layout}
             >
-              {stocks.map((stock, index) => {
+              {displayStocks.map((stock, index) => {
                 const quote = quotes[stock.secid];
                 const trend = trends[stock.secid];
                 return (
@@ -452,7 +538,7 @@ export function WatchlistApp() {
                     active={focusedSecid === stock.secid}
                     editing={editing}
                     first={index === 0}
-                    last={index === stocks.length - 1}
+                    last={index === displayStocks.length - 1}
                     dragOver={dragOver === index && dragIndex !== index}
                     onActivate={activate}
                     onOpen={openDetail}
@@ -482,9 +568,21 @@ export function WatchlistApp() {
 
       <AddStockDialog
         open={dialogOpen}
-        addedSecids={stockSecids}
+        addedStocks={stocks}
         onClose={() => setDialogOpen(false)}
         onAdd={handleAdd}
+        onImport={handleBatchImport}
+      />
+
+      <IndexManagerDialog
+        open={indexManagerOpen}
+        indices={indices}
+        quotes={quotes}
+        onClose={() => setIndexManagerOpen(false)}
+        onAdd={addIndex}
+        onRemove={removeIndex}
+        onMove={moveIndex}
+        onSortByChange={sortIndicesByChange}
       />
 
       {toast ? (

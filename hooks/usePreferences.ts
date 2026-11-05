@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_PREFERENCES, STORAGE_KEYS } from "@/lib/market";
-import type { ColorMode, LayoutMode, Preferences, ThemeMode } from "@/lib/types";
+import type { ColorMode, LayoutMode, Preferences, SortMode, ThemeMode } from "@/lib/types";
 
 function readPreferences(): Preferences {
   try {
@@ -21,6 +21,11 @@ function readPreferences(): Preferences {
       showPrice: parsed.showPrice !== false,
       changeBackground: parsed.changeBackground === true,
       layout: parsed.layout === "double" ? "double" : "single",
+      sort:
+        parsed.sort === "change-desc" || parsed.sort === "change-asc"
+          ? parsed.sort
+          : "manual",
+      showIndexValue: parsed.showIndexValue !== false,
     };
   } catch {
     return DEFAULT_PREFERENCES;
@@ -41,6 +46,7 @@ export function usePreferences() {
     document.documentElement.dataset.showPrice = prefs.showPrice ? "true" : "false";
     document.documentElement.dataset.changeBg = prefs.changeBackground ? "true" : "false";
     document.documentElement.dataset.layout = prefs.layout;
+    document.documentElement.dataset.showIndexValue = prefs.showIndexValue ? "true" : "false";
     document.documentElement.style.colorScheme = resolved;
   }, []);
 
@@ -93,6 +99,14 @@ export function usePreferences() {
     setPreferences((current) => ({ ...current, layout }));
   }, []);
 
+  const setSort = useCallback((sort: SortMode) => {
+    setPreferences((current) => ({ ...current, sort }));
+  }, []);
+
+  const setShowIndexValue = useCallback((showIndexValue: boolean) => {
+    setPreferences((current) => ({ ...current, showIndexValue }));
+  }, []);
+
   return {
     preferences,
     setTheme,
@@ -101,5 +115,7 @@ export function usePreferences() {
     setShowPrice,
     setChangeBackground,
     setLayout,
+    setSort,
+    setShowIndexValue,
   };
 }

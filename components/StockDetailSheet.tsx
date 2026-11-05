@@ -27,6 +27,7 @@ export function StockDetailSheet({ stock, quote, trend, onClose }: StockDetailSh
   onCloseRef.current = onClose;
   const titleId = useId();
   const name = quote?.name || stock.name;
+  const code = quote?.code || stock.code;
   const tone = toneOf(quote?.pct);
 
   useEffect(() => {
@@ -83,10 +84,12 @@ export function StockDetailSheet({ stock, quote, trend, onClose }: StockDetailSh
             </span>
           </div>
           <div className={`detail-sheet-quote tone-${tone}`}>
-            <span className="detail-sheet-price">{formatPrice(quote?.price)}</span>
+            <span className="detail-sheet-price">{formatPrice(quote?.price, code)}</span>
             <span className={`detail-sheet-change tone-${tone}`}>
               <span className={`detail-percent tone-${tone}`}>{formatPercent(quote?.pct)}</span>
-              <span className="detail-delta">{formatDelta(quote?.change)}</span>
+              {quote?.change != null ? (
+                <span className="detail-delta">{formatDelta(quote.change, code)}</span>
+              ) : null}
             </span>
           </div>
           <button
@@ -113,23 +116,23 @@ export function StockDetailSheet({ stock, quote, trend, onClose }: StockDetailSh
               </span>
             </span>
           </div>
-          <DetailChart trend={trend} quote={quote} name={name} />
+          <DetailChart trend={trend} quote={quote} name={name} code={code} />
           <div className="detail-stats">
             <div className="stat">
               <span className="stat-label">今开</span>
-              <span className="stat-value">{formatPrice(quote?.open)}</span>
+              <span className="stat-value">{formatPrice(quote?.open, code)}</span>
             </div>
             <div className="stat">
               <span className="stat-label">最高</span>
-              <span className="stat-value">{formatPrice(quote?.high)}</span>
+              <span className="stat-value">{formatPrice(quote?.high, code)}</span>
             </div>
             <div className="stat">
               <span className="stat-label">最低</span>
-              <span className="stat-value">{formatPrice(quote?.low)}</span>
+              <span className="stat-value">{formatPrice(quote?.low, code)}</span>
             </div>
             <div className="stat">
               <span className="stat-label">昨收</span>
-              <span className="stat-value">{formatPrice(quote?.preClose)}</span>
+              <span className="stat-value">{formatPrice(quote?.preClose, code)}</span>
             </div>
             <div className="stat">
               <span className="stat-label">成交额</span>

@@ -2,7 +2,7 @@
   "name": "tape",
   "version": "1.0.0",
   "private": true,
-  "description": "A calm, precise intraday watchlist for China A-shares.",
+  "description": "A calm, precise intraday watchlist for China A-shares and ETFs.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

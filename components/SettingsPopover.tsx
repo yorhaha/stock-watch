@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { ColorMode, LayoutMode, Preferences, ThemeMode } from "@/lib/types";
+import { ChevronRightIcon } from "./Icons";
 
 interface SettingsPopoverProps {
   open: boolean;
@@ -13,6 +14,9 @@ interface SettingsPopoverProps {
   onShowPrice: (showPrice: boolean) => void;
   onChangeBackground: (enabled: boolean) => void;
   onLayout: (layout: LayoutMode) => void;
+  onShowIndexValue: (show: boolean) => void;
+  onManageIndices: () => void;
+  indexCount: number;
 }
 
 const themeOptions: { value: ThemeMode; label: string }[] = [
@@ -38,6 +42,9 @@ export function SettingsPopover({
   onShowPrice,
   onChangeBackground,
   onLayout,
+  onShowIndexValue,
+  onManageIndices,
+  indexCount,
 }: SettingsPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
@@ -129,6 +136,39 @@ export function SettingsPopover({
             onClick={() => onShowPrice(false)}
           >
             隐藏
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-row">
+        <span className="settings-label">指数</span>
+        <div className="settings-combo">
+          <div className="segmented" role="group" aria-label="指数数值显示">
+            <button
+              type="button"
+              className={preferences.showIndexValue ? "is-selected" : ""}
+              aria-pressed={preferences.showIndexValue}
+              onClick={() => onShowIndexValue(true)}
+            >
+              显示
+            </button>
+            <button
+              type="button"
+              className={!preferences.showIndexValue ? "is-selected" : ""}
+              aria-pressed={!preferences.showIndexValue}
+              onClick={() => onShowIndexValue(false)}
+            >
+              隐藏
+            </button>
+          </div>
+          <button
+            type="button"
+            className="settings-manage"
+            onClick={onManageIndices}
+            aria-label={`管理指数，当前 ${indexCount} 个`}
+          >
+            管理
+            <ChevronRightIcon size={12} />
           </button>
         </div>
       </div>

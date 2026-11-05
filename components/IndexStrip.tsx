@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { formatPercent, formatPrice, toneOf } from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
 import { Sparkline } from "./Sparkline";
@@ -8,11 +9,18 @@ interface IndexStripProps {
   indices: StockRef[];
   quotes: Record<string, Quote>;
   trends: Record<string, Trend>;
+  showValues: boolean;
 }
 
-export function IndexStrip({ indices, quotes, trends }: IndexStripProps) {
+export function IndexStrip({ indices, quotes, trends, showValues }: IndexStripProps) {
+  if (indices.length === 0) return null;
   return (
-    <section className="index-strip" aria-label="市场指数">
+    <section
+      className="index-strip"
+      aria-label="市场指数"
+      data-index-count={indices.length}
+      style={{ "--index-columns": indices.length <= 4 ? indices.length : 3 } as CSSProperties}
+    >
       {indices.map((index) => {
         const quote = quotes[index.secid];
         const tone = toneOf(quote?.pct);
@@ -23,7 +31,7 @@ export function IndexStrip({ indices, quotes, trends }: IndexStripProps) {
             data-secid={index.secid}
             data-price={quote?.price ?? ""}
             data-pct={quote?.pct ?? ""}
-            aria-label={quote ? `${quote.name} ${formatPrice(quote.price)} ${formatPercent(quote.pct)}` : index.name}
+            aria-label={quote && showValues ? `${quote.name} ${formatPrice(quote.price)} ${formatPercent(quote.pct)}` : index.name}
           >
             <div className="index-copy">
               <span className="index-name">{quote?.name || index.name}</span>

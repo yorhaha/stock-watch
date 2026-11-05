@@ -1,6 +1,9 @@
-import type { SessionInfo, StockRef } from "./types";
+import type { Quote, SessionInfo, SortMode, StockRef } from "./types";
 
 export const MARKET_TIME_ZONE = "Asia/Shanghai";
+
+export const WATCHLIST_LIMIT = 30;
+export const INDEX_LIMIT = 6;
 
 export const DEFAULT_STOCKS: StockRef[] = [
   { secid: "1.600519", code: "600519", name: "贵州茅台" },
@@ -21,7 +24,7 @@ export const DEFAULT_STOCKS: StockRef[] = [
   { secid: "1.600030", code: "600030", name: "中信证券" },
 ];
 
-export const MARKET_INDICES: StockRef[] = [
+export const DEFAULT_INDICES: StockRef[] = [
   { secid: "1.000001", code: "000001", name: "上证指数" },
   { secid: "0.399001", code: "399001", name: "深证成指" },
   { secid: "0.399006", code: "399006", name: "创业板指" },
@@ -40,10 +43,14 @@ export const POPULAR_STOCKS: StockRef[] = [
   { secid: "0.300124", code: "300124", name: "汇川技术" },
   { secid: "1.600031", code: "600031", name: "三一重工" },
   { secid: "1.601728", code: "601728", name: "中国电信" },
+  { secid: "1.510300", code: "510300", name: "沪深300ETF" },
+  { secid: "0.159915", code: "159915", name: "创业板ETF" },
+  { secid: "1.518880", code: "518880", name: "黄金ETF" },
 ];
 
 export const STORAGE_KEYS = {
   watchlist: "tape.watchlist.v1",
+  indices: "tape.indices.v1",
   prefs: "tape.preferences.v1",
 } as const;
 
@@ -54,6 +61,8 @@ export const DEFAULT_PREFERENCES = {
   showPrice: true,
   changeBackground: false,
   layout: "single" as const,
+  sort: "manual" as const,
+  showIndexValue: true,
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
@@ -157,11 +166,16 @@ export function formatTradeDate(value: string): string {
   return `${Number(match[2])}月${Number(match[3])}日`;
 }
 
-export function formatPrice(value: number | null | undefined): string {
+export function pricePrecision(code: string | null | undefined): number {
+  return code && isFundCode(code) ? 3 : 2;
+}
+
+export function formatPrice(value: number | null | undefined, code?: string | null): string {
   if (value == null || !Number.isFinite(value)) return "—";
+  const digits = pricePrecision(code);
   return value.toLocaleString("zh-CN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   });
 }
 
@@ -171,10 +185,10 @@ export function formatPercent(value: number | null | undefined): string {
   return `${sign}${value.toFixed(2)}%`;
 }
 
-export function formatDelta(value: number | null | undefined): string {
+export function formatDelta(value: number | null | undefined, code?: string | null): string {
   if (value == null || !Number.isFinite(value)) return "—";
   const sign = value > 0.0001 ? "+" : "";
-  return `${sign}${value.toFixed(2)}`;
+  return `${sign}${value.toFixed(pricePrecision(code))}`;
 }
 
 export function formatAmount(value: number | null | undefined): string {
@@ -211,4 +225,37 @@ export function toneOf(value: number | null | undefined): "up" | "down" | "flat"
 
 export function isStockCode(code: string): boolean {
   return /^(60[0135]\d{3}|68[89]\d{3}|00[0123]\d{3}|30[01]\d{3}|920\d{3})$/.test(code);
+}
+
+export function isFundCode(code: string): boolean {
+  return /^(5\d{5}|159\d{3})$/.test(code);
+}
+
+export function isWatchlistCode(code: string): boolean {
+  return isStockCode(code) || isFundCode(code);
+}
+
+export function isIndexCode(code: string): boolean {
+  return /^(000|399|899|930|931|932)\d{3}$/.test(code);
+}
+
+export function sortStocksByChange(
+  stocks: StockRef[],
+  quotes: Record<string, Quote>,
+  mode: SortMode,
+): StockRef[] {
+  if (mode === "manual") return stocks;
+  const direction = mode === "change-desc" ? -1 : 1;
+  return stocks
+    .map((stock, order) => ({ stock, order, pct: quotes[stock.secid]?.pct }))
+    .sort((a, b) => {
+      const aValue = a.pct;
+      const bValue = b.pct;
+      if (aValue == null && bValue == null) return a.order - b.order;
+      if (aValue == null) return 1;
+      if (bValue == null) return -1;
+      if (aValue === bValue) return a.order - b.order;
+      return (aValue - bValue) * direction;
+    })
+    .map((entry) => entry.stock);
 }

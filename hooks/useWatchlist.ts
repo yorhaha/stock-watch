@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { DEFAULT_STOCKS, STORAGE_KEYS, isStockCode } from "@/lib/market";
+import { DEFAULT_STOCKS, STORAGE_KEYS, WATCHLIST_LIMIT, isWatchlistCode } from "@/lib/market";
 import type { StockRef } from "@/lib/types";
 
 function sanitize(value: unknown): StockRef[] {
@@ -13,7 +13,7 @@ function sanitize(value: unknown): StockRef[] {
     const candidate = item as Partial<StockRef>;
     const code = String(candidate.code ?? "");
     const secid = String(candidate.secid ?? "");
-    if (!isStockCode(code) || !/^[01]\.\d{6}$/.test(secid)) continue;
+    if (!isWatchlistCode(code) || !/^[01]\.\d{6}$/.test(secid)) continue;
     if (seen.has(secid)) continue;
     seen.add(secid);
     stocks.push({
@@ -21,7 +21,7 @@ function sanitize(value: unknown): StockRef[] {
       code,
       name: String(candidate.name ?? code),
     });
-    if (stocks.length >= 30) break;
+    if (stocks.length >= WATCHLIST_LIMIT) break;
   }
   return stocks;
 }
@@ -52,7 +52,7 @@ export function useWatchlist() {
   const add = useCallback((stock: StockRef) => {
     setStocks((current) => {
       if (current.some((item) => item.secid === stock.secid)) return current;
-      if (current.length >= 30) return current;
+      if (current.length >= WATCHLIST_LIMIT) return current;
       return [...current, stock];
     });
   }, []);
@@ -60,9 +60,23 @@ export function useWatchlist() {
   const insert = useCallback((stock: StockRef, index: number) => {
     setStocks((current) => {
       if (current.some((item) => item.secid === stock.secid)) return current;
-      if (current.length >= 30) return current;
+      if (current.length >= WATCHLIST_LIMIT) return current;
       const next = [...current];
       next.splice(Math.max(0, Math.min(index, next.length)), 0, stock);
+      return next;
+    });
+  }, []);
+
+  const addMany = useCallback((incoming: StockRef[]) => {
+    setStocks((current) => {
+      const next = [...current];
+      const seen = new Set(current.map((stock) => stock.secid));
+      for (const stock of incoming) {
+        if (next.length >= WATCHLIST_LIMIT) break;
+        if (seen.has(stock.secid)) continue;
+        seen.add(stock.secid);
+        next.push(stock);
+      }
       return next;
     });
   }, []);
@@ -89,5 +103,5 @@ export function useWatchlist() {
     });
   }, []);
 
-  return { stocks, hydrated, add, insert, remove, move };
+  return { stocks, hydrated, add, addMany, insert, remove, move };
 }

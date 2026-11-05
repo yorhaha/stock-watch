@@ -4,23 +4,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { searchStocks } from "@/lib/eastmoney";
 import { POPULAR_STOCKS } from "@/lib/market";
 import type { SearchStock, StockRef } from "@/lib/types";
-import { CheckIcon, CloseIcon, PlusIcon, SearchIcon } from "./Icons";
+import { BatchImportPanel } from "./BatchImportPanel";
+import { CheckIcon, CloseIcon, ListPlusIcon, PlusIcon, SearchIcon } from "./Icons";
 
 interface AddStockDialogProps {
   open: boolean;
-  addedSecids: string[];
+  addedStocks: StockRef[];
   onClose: () => void;
   onAdd: (stock: StockRef) => void;
+  onImport: (stocks: StockRef[]) => void;
 }
 
 const searchCache = new Map<string, SearchStock[]>();
 
 export function AddStockDialog({
   open,
-  addedSecids,
+  addedStocks,
   onClose,
   onAdd,
+  onImport,
 }: AddStockDialogProps) {
+  const [mode, setMode] = useState<"search" | "batch">("search");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchStock[]>([]);
   const [searching, setSearching] = useState(false);
@@ -29,7 +33,7 @@ export function AddStockDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
-  const added = useMemo(() => new Set(addedSecids), [addedSecids]);
+  const added = useMemo(() => new Set(addedStocks.map((stock) => stock.secid)), [addedStocks]);
 
   useEffect(() => {
     if (!open) return;
@@ -39,6 +43,7 @@ export function AddStockDialog({
 
   useEffect(() => {
     if (!open) return;
+    setMode("search");
     setQuery("");
     setResults([]);
     setError(null);
@@ -55,7 +60,7 @@ export function AddStockDialog({
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || mode !== "search") return;
     const keyword = query.trim();
     if (!keyword) {
       setResults([]);
@@ -94,7 +99,7 @@ export function AddStockDialog({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query, open]);
+  }, [query, open, mode]);
 
   const visible: SearchStock[] = useMemo(() => {
     if (query.trim()) return results;
@@ -122,6 +127,8 @@ export function AddStockDialog({
     });
   };
 
+  const showBatch = mode === "batch";
+
   if (!open) return null;
 
   return (
@@ -132,12 +139,12 @@ export function AddStockDialog({
       }}
     >
       <div
-        className="command-dialog"
+        className={`command-dialog ${showBatch ? "is-batch" : ""}`}
         role="dialog"
         aria-modal="true"
-        aria-label="添加股票"
+        aria-label={showBatch ? "批量导入" : "添加自选"}
         ref={dialogRef}
-        data-state={searching ? "searching" : "idle"}
+        data-state={showBatch ? "batch" : searching ? "searching" : "idle"}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             event.preventDefault();
@@ -146,7 +153,7 @@ export function AddStockDialog({
           }
           if (event.key === "Tab") {
             const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
-              "input, button:not([disabled]), [href]",
+              "input, textarea, button:not([disabled]), [href]",
             );
             if (!focusable || focusable.length === 0) return;
             const first = focusable[0];
@@ -174,61 +181,92 @@ export function AddStockDialog({
           }
         }}
       >
-        <div className="command-input-wrap">
-          <SearchIcon size={18} className="command-search-icon" />
-          <input
-            ref={inputRef}
-            className="command-input"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索股票"
-            autoComplete="off"
-            spellCheck={false}
-            aria-label="搜索股票"
-            aria-controls="stock-search-results"
-            aria-activedescendant={visible[highlighted] ? `command-result-${highlighted}` : undefined}
-          />
-          {searching ? <span className="search-spinner" aria-label="搜索中" /> : null}
-          <button type="button" className="icon-button compact command-close" onClick={onClose} aria-label="关闭">
-            <CloseIcon size={14} />
-          </button>
-        </div>
-
-        <div className="command-results" id="stock-search-results" role="listbox">
-          {visible.map((stock, index) => {
-            const isAdded = added.has(stock.secid);
-            return (
+        {showBatch ? (
+          <>
+            <div className="command-input-wrap batch-head">
               <button
                 type="button"
-                key={stock.secid}
-                id={`command-result-${index}`}
-                data-secid={stock.secid}
-                role="option"
-                aria-selected={index === highlighted}
-                aria-label={`${isAdded ? "已添加" : "添加"} ${stock.name}`}
-                className={`command-result ${index === highlighted ? "is-highlighted" : ""} ${isAdded ? "is-added" : ""}`}
-                onMouseEnter={() => setHighlighted(index)}
-                onClick={() => choose(stock)}
-                disabled={isAdded}
+                className="icon-button compact command-back"
+                onClick={() => setMode("search")}
+                aria-label="返回搜索"
               >
-                <span className="result-identity">
-                  <span className="result-name">{stock.name}</span>
-                </span>
-                <span className="result-action" aria-hidden="true">
-                  {isAdded ? <CheckIcon size={14} /> : <PlusIcon size={14} />}
-                </span>
+                <SearchIcon size={14} />
               </button>
-            );
-          })}
+              <span className="command-title">批量导入</span>
+              <button type="button" className="icon-button compact command-close" onClick={onClose} aria-label="关闭">
+                <CloseIcon size={14} />
+              </button>
+            </div>
+            <BatchImportPanel addedStocks={addedStocks} onImport={onImport} />
+          </>
+        ) : (
+          <>
+            <div className="command-input-wrap">
+              <SearchIcon size={18} className="command-search-icon" />
+              <input
+                ref={inputRef}
+                className="command-input"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="搜索股票 / ETF"
+                autoComplete="off"
+                spellCheck={false}
+                aria-label="搜索股票或 ETF"
+                aria-controls="stock-search-results"
+                aria-activedescendant={visible[highlighted] ? `command-result-${highlighted}` : undefined}
+              />
+              {searching ? <span className="search-spinner" aria-label="搜索中" /> : null}
+              <button type="button" className="icon-button compact command-close" onClick={onClose} aria-label="关闭">
+                <CloseIcon size={14} />
+              </button>
+            </div>
 
-          {query.trim() && !searching && !error && visible.length === 0 ? (
-            <div className="command-empty">未找到「{query.trim()}」</div>
-          ) : null}
+            <div className="command-results" id="stock-search-results" role="listbox">
+              {visible.map((stock, index) => {
+                const isAdded = added.has(stock.secid);
+                return (
+                  <button
+                    type="button"
+                    key={stock.secid}
+                    id={`command-result-${index}`}
+                    data-secid={stock.secid}
+                    role="option"
+                    aria-selected={index === highlighted}
+                    aria-label={`${isAdded ? "已添加" : "添加"} ${stock.name}`}
+                    className={`command-result ${index === highlighted ? "is-highlighted" : ""} ${isAdded ? "is-added" : ""}`}
+                    onMouseEnter={() => setHighlighted(index)}
+                    onClick={() => choose(stock)}
+                    disabled={isAdded}
+                  >
+                    <span className="result-identity">
+                      <span className="result-name">{stock.name}</span>
+                    </span>
+                    <span className="result-action" aria-hidden="true">
+                      {isAdded ? <CheckIcon size={14} /> : <PlusIcon size={14} />}
+                    </span>
+                  </button>
+                );
+              })}
 
-          {error ? (
-            <div className="command-empty command-error">{error}</div>
-          ) : null}
-        </div>
+              {query.trim() && !searching && !error && visible.length === 0 ? (
+                <div className="command-empty">未找到「{query.trim()}」</div>
+              ) : null}
+
+              {error ? (
+                <div className="command-empty command-error">{error}</div>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              className="command-batch-entry"
+              onClick={() => setMode("batch")}
+            >
+              <ListPlusIcon size={15} />
+              批量导入
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

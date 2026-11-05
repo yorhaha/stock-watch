@@ -72,7 +72,7 @@ export const StockRow = memo(function StockRow({
           <GripIcon size={15} />
         </span>
         <div className="stock-identity">
-          <span className="stock-name">{name}</span>
+          <span className="stock-name" title={name}>{name}</span>
         </div>
         <div className="edit-actions">
           <button
@@ -122,7 +122,7 @@ export const StockRow = memo(function StockRow({
         role="button"
         tabIndex={0}
         aria-haspopup="dialog"
-        aria-label={`${name}，最新价 ${formatPrice(quote?.price)}，${formatPercent(quote?.pct)}，查看分时`}
+        aria-label={`${name}，最新价 ${formatPrice(quote?.price, stock.code)}，${formatPercent(quote?.pct)}，查看分时`}
         onClick={() => onOpen(stock)}
         onFocus={() => onActivate(stock)}
         onKeyDown={(event) => {
@@ -134,7 +134,7 @@ export const StockRow = memo(function StockRow({
         }}
       >
         <div className="stock-identity">
-          <span className="stock-name">{name}</span>
+          <span className="stock-name" title={name}>{name}</span>
         </div>
 
         <div className="stock-spark">
@@ -142,10 +142,12 @@ export const StockRow = memo(function StockRow({
         </div>
 
         <div className="stock-quote">
-          <span className="stock-price">{formatPrice(quote?.price)}</span>
+          <span className="stock-price">{formatPrice(quote?.price, stock.code)}</span>
           <span className="stock-change">
             <Percent value={quote?.pct} />
-            <span className="change-delta">{formatDelta(quote?.change)}</span>
+            {quote?.change != null ? (
+              <span className="change-delta">{formatDelta(quote.change, stock.code)}</span>
+            ) : null}
           </span>
         </div>
       </div>

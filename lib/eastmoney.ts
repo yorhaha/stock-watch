@@ -1,8 +1,9 @@
-import { isStockCode, tradingMinuteFromTime } from "./market";
-import type { Quote, SearchStock, StockRef, Trend, TrendPoint } from "./types";
+import { isFundCode, isIndexCode, isWatchlistCode, tradingMinuteFromTime } from "./market";
+import type { Quote, SearchStock, Trend, TrendPoint } from "./types";
 
 const QUOTE_ENDPOINT = "https://push2.eastmoney.com/api/qt/ulist.np/get";
 const TREND_ENDPOINT = "https://push2.eastmoney.com/api/qt/stock/trends2/get";
+const TREND_HISTORY_ENDPOINT = "https://push2his.eastmoney.com/api/qt/stock/trends2/get";
 const SEARCH_ENDPOINT = "https://searchapi.eastmoney.com/api/suggest/get";
 const SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E326E8";
 
@@ -39,21 +40,25 @@ function quoteFromRaw(raw: RawRecord): Quote | null {
   const code = String(raw.f12 ?? "");
   const market = raw.f13;
   if (!code || (market !== 0 && market !== 1)) return null;
+  const rawPrice = numeric(raw.f2);
+  const preClose = numeric(raw.f18);
+  const traded = rawPrice != null && rawPrice > 0;
+  const price = traded ? rawPrice : preClose != null && preClose > 0 ? preClose : null;
   return {
     secid: `${market}.${code}`,
     code,
     name: String(raw.f14 ?? code),
-    price: numeric(raw.f2),
-    pct: numeric(raw.f3),
-    change: numeric(raw.f4),
+    price,
+    pct: traded ? numeric(raw.f3) : null,
+    change: traded ? numeric(raw.f4) : null,
     amount: numeric(raw.f6),
-    amplitude: numeric(raw.f7),
-    turnover: numeric(raw.f8),
-    volumeRatio: numeric(raw.f10),
-    high: numeric(raw.f15),
-    low: numeric(raw.f16),
-    open: numeric(raw.f17),
-    preClose: numeric(raw.f18),
+    amplitude: traded ? numeric(raw.f7) : null,
+    turnover: traded ? numeric(raw.f8) : null,
+    volumeRatio: traded ? numeric(raw.f10) : null,
+    high: traded ? numeric(raw.f15) : null,
+    low: traded ? numeric(raw.f16) : null,
+    open: traded ? numeric(raw.f17) : null,
+    preClose,
   };
 }
 
@@ -103,27 +108,25 @@ export async function fetchQuotes(
   return result;
 }
 
-export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<Trend | null> {
-  const params = new URLSearchParams({
-    secid,
-    fields1: "f1,f2,f3,f4,f5,f6,f7,f8",
-    fields2: "f51,f52,f53,f54,f55,f56,f57,f58",
-    iscr: "0",
-    ndays: "1",
-    _: String(Date.now()),
-  });
-  const payload = (await fetchJson(`${TREND_ENDPOINT}?${params.toString()}`, signal)) as {
-    data?: {
-      preClose?: number;
-      trends?: string[];
-    } | null;
-  };
+interface TrendPayload {
+  data?: {
+    preClose?: number;
+    trends?: string[];
+  } | null;
+}
+
+function trendFromPayload(secid: string, payload: TrendPayload): Trend | null {
   const data = payload.data;
   if (!data?.trends?.length) return null;
 
+  const datedRows = data.trends.filter((row) => row.includes(" "));
+  const latestDate = datedRows.length > 0
+    ? datedRows[datedRows.length - 1].split(" ")[0]
+    : "";
   const points: TrendPoint[] = [];
-  let tradeDate = "";
+  let tradeDate = latestDate;
   for (const row of data.trends) {
+    if (latestDate && row.includes(" ") && !row.startsWith(`${latestDate} `)) continue;
     const values = row.split(",");
     if (values.length < 8) continue;
     const [time, openValue, closeValue, , , volumeValue, , averageValue] = values;
@@ -146,12 +149,38 @@ export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<T
       ? data.preClose
       : points[0].open;
 
-  return {
+  return { secid, tradeDate, preClose, points };
+}
+
+export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<Trend | null> {
+  const params = new URLSearchParams({
     secid,
-    tradeDate,
-    preClose,
-    points,
-  };
+    fields1: "f1,f2,f3,f4,f5,f6,f7,f8",
+    fields2: "f51,f52,f53,f54,f55,f56,f57,f58",
+    iscr: "0",
+    ndays: "1",
+    _: String(Date.now()),
+  });
+  let payload = (await fetchJson(
+    `${TREND_ENDPOINT}?${params.toString()}`,
+    signal,
+  )) as TrendPayload;
+  if (payload.data?.trends?.length) return trendFromPayload(secid, payload);
+
+  const historyParams = new URLSearchParams({
+    secid,
+    fields1: "f1,f2,f3,f4,f5,f6,f7,f8",
+    fields2: "f51,f52,f53,f54,f55,f56,f57,f58",
+    iscr: "0",
+    ndays: "2",
+    ut: "fa5fd1943c7b386f172d6893dbfba10b",
+    _: String(Date.now()),
+  });
+  payload = (await fetchJson(
+    `${TREND_HISTORY_ENDPOINT}?${historyParams.toString()}`,
+    signal,
+  )) as TrendPayload;
+  return trendFromPayload(secid, payload);
 }
 
 let jsonpSequence = 0;
@@ -204,7 +233,7 @@ interface SuggestItem {
   QuoteID?: string;
 }
 
-export async function searchStocks(query: string, signal?: AbortSignal): Promise<SearchStock[]> {
+async function querySuggestions(query: string, signal?: AbortSignal): Promise<SuggestItem[]> {
   const keyword = query.trim();
   if (!keyword) return [];
   const params = new URLSearchParams({
@@ -218,16 +247,20 @@ export async function searchStocks(query: string, signal?: AbortSignal): Promise
   }>(`${SEARCH_ENDPOINT}?${params.toString()}`, signal)) as {
     QuotationCodeTable?: { Data?: SuggestItem[] | null };
   };
+  return payload.QuotationCodeTable?.Data ?? [];
+}
 
+export async function searchStocks(query: string, signal?: AbortSignal): Promise<SearchStock[]> {
   const results: SearchStock[] = [];
   const seen = new Set<string>();
-  for (const item of payload.QuotationCodeTable?.Data ?? []) {
+  for (const item of await querySuggestions(query, signal)) {
     const isMainBoard = item.Classify === "AStock";
     const isBeijing = item.Classify === "NEEQ" && item.SecurityTypeName === "京A";
-    if (!isMainBoard && !isBeijing) continue;
+    const isFund = item.Classify === "Fund" && isFundCode(String(item.Code ?? ""));
+    if (!isMainBoard && !isBeijing && !isFund) continue;
     const code = String(item.Code ?? "");
     const secid = String(item.QuoteID ?? "");
-    if (!isStockCode(code) || !/^[01]\.\d{6}$/.test(secid)) continue;
+    if (!isWatchlistCode(code) || !/^[01]\.\d{6}$/.test(secid)) continue;
     if (seen.has(secid)) continue;
     seen.add(secid);
     results.push({
@@ -239,13 +272,34 @@ export async function searchStocks(query: string, signal?: AbortSignal): Promise
   return results;
 }
 
+export async function searchIndices(query: string, signal?: AbortSignal): Promise<SearchStock[]> {
+  const results: SearchStock[] = [];
+  const seen = new Set<string>();
+  const seenNames = new Set<string>();
+  for (const item of await querySuggestions(query, signal)) {
+    if (item.Classify !== "Index") continue;
+    const code = String(item.Code ?? "");
+    const secid = String(item.QuoteID ?? "");
+    if (!isIndexCode(code) || !/^[01]\.\d{6}$/.test(secid)) continue;
+    const name = String(item.Name ?? code);
+    const nameKey = name.replace(/\s+/g, "").toLowerCase();
+    if (seen.has(secid) || seenNames.has(nameKey)) continue;
+    seen.add(secid);
+    seenNames.add(nameKey);
+    results.push({ secid, code, name });
+  }
+  return results;
+}
+
 export async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
   worker: (item: T, index: number) => Promise<R>,
+  onSettled?: (completed: number, total: number) => void,
 ): Promise<PromiseSettledResult<R>[]> {
   const results: PromiseSettledResult<R>[] = new Array(items.length);
   let cursor = 0;
+  let completed = 0;
 
   async function run() {
     while (cursor < items.length) {
@@ -254,6 +308,9 @@ export async function mapWithConcurrency<T, R>(
         results[index] = { status: "fulfilled", value: await worker(items[index], index) };
       } catch (error) {
         results[index] = { status: "rejected", reason: error };
+      } finally {
+        completed += 1;
+        onSettled?.(completed, items.length);
       }
     }
   }

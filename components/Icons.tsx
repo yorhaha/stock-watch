@@ -126,3 +126,36 @@ export function RefreshIcon(props: IconProps) {
     </IconBase>
   );
 }
+
+export function SortIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M8.5 5.5v13M5.8 15.8l2.7 2.7 2.7-2.7M15.5 18.5v-13M12.8 8.2l2.7-2.7 2.7 2.7" />
+    </IconBase>
+  );
+}
+
+export function ListPlusIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M4.5 6.5h9M4.5 12h9M4.5 17.5h6" />
+      <path d="M17.5 12v6M14.5 15h6" />
+    </IconBase>
+  );
+}
+
+export function ArrowLeftIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M19 12H5M10 7l-5 5 5 5" />
+    </IconBase>
+  );
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="m9.5 7 5 5-5 5" />
+    </IconBase>
+  );
+}

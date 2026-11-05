@@ -16,9 +16,10 @@ interface DetailChartProps {
   trend?: Trend;
   quote?: Quote;
   name: string;
+  code?: string;
 }
 
-export function DetailChart({ trend, quote, name }: DetailChartProps) {
+export function DetailChart({ trend, quote, name, code }: DetailChartProps) {
   const [containerRef, width] = useElementWidth<HTMLDivElement>();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const rawId = useId();
@@ -110,7 +111,7 @@ export function DetailChart({ trend, quote, name }: DetailChartProps) {
       ((geometry.domain.max - geometry.domain.min) / 3) * index,
   );
 
-  const formatAxis = (value: number) => formatPrice(value);
+  const formatAxis = (value: number) => formatPrice(value, code);
   const timeLabel = hovered?.time
     ? hovered.time.includes(" ")
       ? hovered.time.split(" ")[1].slice(0, 5)
@@ -285,11 +286,11 @@ export function DetailChart({ trend, quote, name }: DetailChartProps) {
               <div className="tooltip-time">{timeLabel}</div>
               <div className="tooltip-row">
                 <span>价格</span>
-                <strong>{formatPrice(hovered.price)}</strong>
+                <strong>{formatPrice(hovered.price, code)}</strong>
               </div>
               <div className="tooltip-row">
                 <span>均价</span>
-                <span>{formatPrice(hovered.average)}</span>
+                <span>{formatPrice(hovered.average, code)}</span>
               </div>
               <div className="tooltip-row">
                 <span>成交量</span>
