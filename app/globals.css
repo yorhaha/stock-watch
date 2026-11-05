@@ -2629,6 +2629,7 @@ a {
   }
 
   .detail-sheet-head {
+    gap: 10px;
     padding: calc(16px + env(safe-area-inset-top)) 16px 5px;
   }
 
@@ -2638,6 +2639,17 @@ a {
 
   .detail-sheet-price {
     font-size: 17px;
+  }
+
+  .detail-sheet-quote {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .detail-sheet-quote .detail-delta {
+    display: none;
   }
 
   .detail-sheet-body {
