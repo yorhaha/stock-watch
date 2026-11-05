@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { LayoutMode, Preferences, SortMode, ThemeMode } from "@/lib/types";
+import type { Preferences, SortMode, ThemeMode } from "@/lib/types";
 import { ChevronRightIcon } from "./Icons";
 
 interface SettingsPopoverProps {
@@ -12,7 +12,6 @@ interface SettingsPopoverProps {
   onTheme: (theme: ThemeMode) => void;
   onRefresh: (refreshMs: number) => void;
   onShowPrice: (showPrice: boolean) => void;
-  onLayout: (layout: LayoutMode) => void;
   onSort: (sort: SortMode) => void;
   onShowIndexValue: (show: boolean) => void;
   onManageIndices: () => void;
@@ -41,7 +40,6 @@ export function SettingsPopover({
   onTheme,
   onRefresh,
   onShowPrice,
-  onLayout,
   onSort,
   onShowIndexValue,
   onManageIndices,
@@ -149,39 +147,6 @@ export function SettingsPopover({
           >
             管理
             <ChevronRightIcon size={12} />
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-row">
-        <span className="settings-label">布局</span>
-        <div className="segmented layout-segmented" role="group" aria-label="列表布局">
-          <button
-            type="button"
-            className={preferences.layout === "single" ? "is-selected" : ""}
-            aria-label="单列"
-            aria-pressed={preferences.layout === "single"}
-            onClick={() => onLayout("single")}
-          >
-            <span className="layout-glyph single" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
-          </button>
-          <button
-            type="button"
-            className={preferences.layout === "double" ? "is-selected" : ""}
-            aria-label="双列"
-            aria-pressed={preferences.layout === "double"}
-            onClick={() => onLayout("double")}
-          >
-            <span className="layout-glyph double" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-              <i />
-            </span>
           </button>
         </div>
       </div>

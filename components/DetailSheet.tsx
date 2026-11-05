@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import { formatDelta, formatPercent, formatPrice, toneOf } from "@/lib/market";
+import { formatDelta, formatIndexDelta, formatIndexPrice, formatPercent, formatPrice, toneOf } from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
 import { DailyKChart } from "./DailyKChart";
 import { DetailChart } from "./DetailChart";
@@ -35,6 +35,7 @@ export function DetailSheet({
   const name = quote?.name || instrument.name;
   const code = quote?.code || instrument.code;
   const tone = toneOf(quote?.pct);
+  const isIndex = kind === "index";
   const hasAverage = trend == null || trend.points.some((point) => point.average != null);
 
   useEffect(() => {
@@ -105,11 +106,15 @@ export function DetailSheet({
             ) : null}
           </div>
           <div className={`detail-sheet-quote tone-${tone}`}>
-            <span className="detail-sheet-price">{formatPrice(quote?.price, code)}</span>
+            <span className="detail-sheet-price">
+              {isIndex ? formatIndexPrice(quote?.price) : formatPrice(quote?.price, code)}
+            </span>
             <span className={`detail-sheet-change tone-${tone}`}>
               <span className={`detail-percent tone-${tone}`}>{formatPercent(quote?.pct)}</span>
               {quote?.change != null ? (
-                <span className="detail-delta">{formatDelta(quote.change, code)}</span>
+                <span className="detail-delta">
+                  {isIndex ? formatIndexDelta(quote.change) : formatDelta(quote.change, code)}
+                </span>
               ) : null}
             </span>
           </div>

@@ -1979,41 +1979,9 @@ a {
   pointer-events: none;
 }
 
-.layout-glyph {
-  display: grid;
-  width: 16px;
-  height: 12px;
-  gap: 2px;
-}
-
-.layout-glyph i {
-  display: block;
-  border-radius: 1.5px;
-  background: currentColor;
-  opacity: 0.55;
-}
-
-.layout-glyph.single {
-  grid-template-rows: repeat(3, 1fr);
-}
-
-.layout-glyph.double {
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-}
-
-
-.segmented button .layout-glyph {
-  margin: 0 auto;
-}
-
 :root[data-show-price="false"] .stock-price,
 :root[data-show-price="false"] .change-delta {
   display: none;
-}
-
-:root[data-show-price="false"][data-layout="single"] .watchlist .stock-main {
-  grid-template-columns: 180px minmax(0, 1fr) 76px;
 }
 
 .stock-change .tone-text,
@@ -2024,30 +1992,30 @@ a {
   background: color-mix(in srgb, currentColor 11%, transparent);
 }
 
-:root[data-layout="double"] .watchlist:not(.is-editing) {
+.watchlist:not(.is-editing) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px 10px;
   border: 0;
 }
 
-:root[data-layout="double"] .watchlist:not(.is-editing) .stock-row {
+.watchlist:not(.is-editing) .stock-row {
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
 }
 
-:root[data-layout="double"] .watchlist:not(.is-editing) .stock-row:last-child {
+.watchlist:not(.is-editing) .stock-row:last-child {
   border-bottom: 1px solid var(--line);
 }
 
-:root[data-layout="double"] .watchlist:not(.is-editing) .stock-row.is-held {
+.watchlist:not(.is-editing) .stock-row.is-held {
   background-color: var(--surface);
   background-image: linear-gradient(var(--hold-bg), var(--hold-bg));
 }
 
-:root[data-layout="double"] .watchlist:not(.is-editing) .stock-main {
+.watchlist:not(.is-editing) .stock-main {
   height: 64px;
   grid-template-columns: 112px minmax(0, 1fr);
   grid-template-areas:
@@ -2059,7 +2027,7 @@ a {
   padding: 8px 10px;
 }
 
-:root[data-layout="double"] .watchlist:not(.is-editing) .stock-identity {
+.watchlist:not(.is-editing) .stock-identity {
   grid-area: identity;
   align-self: center;
   flex-direction: row;
@@ -2067,7 +2035,7 @@ a {
   gap: 0;
 }
 
-:root[data-layout="double"] .watchlist:not(.is-editing) .stock-quote {
+.watchlist:not(.is-editing) .stock-quote {
   grid-area: quote;
   align-self: center;
   flex-direction: column;
@@ -2075,21 +2043,21 @@ a {
   gap: 2px;
 }
 
-:root[data-layout="double"] .watchlist:not(.is-editing) .stock-price {
+.watchlist:not(.is-editing) .stock-price {
   font-size: 13px;
 }
 
-:root[data-layout="double"] .watchlist:not(.is-editing) .stock-change {
+.watchlist:not(.is-editing) .stock-change {
   justify-content: flex-start;
   font-size: 9px;
   gap: 4px;
 }
 
-:root[data-layout="double"] .watchlist:not(.is-editing) .change-delta {
+.watchlist:not(.is-editing) .change-delta {
   display: none;
 }
 
-:root[data-layout="double"] .watchlist:not(.is-editing) .stock-spark {
+.watchlist:not(.is-editing) .stock-spark {
   grid-area: spark;
   align-self: stretch;
   min-height: 0;
@@ -2097,7 +2065,7 @@ a {
   padding: 2px 0;
 }
 
-:root[data-layout="double"] .watchlist:not(.is-editing) .sparkline {
+.watchlist:not(.is-editing) .sparkline {
   height: 100%;
 }
 
@@ -2273,10 +2241,6 @@ a {
   .skeleton-row {
     grid-template-columns: 150px minmax(130px, 1fr) 110px;
     gap: 16px;
-  }
-
-  :root[data-show-price="false"][data-layout="single"] .watchlist .stock-main {
-    grid-template-columns: 150px minmax(0, 1fr) 64px;
   }
 }
 
@@ -2551,30 +2515,26 @@ a {
     height: 24px;
   }
 
-  :root[data-show-price="false"][data-layout="single"] .watchlist .stock-main {
-    grid-template-columns: 88px minmax(0, 1fr) 52px;
-  }
-
-  :root[data-layout="double"] .watchlist:not(.is-editing) {
+  .watchlist:not(.is-editing) {
     gap: 6px;
   }
 
-  :root[data-layout="double"] .watchlist:not(.is-editing) .stock-main {
+  .watchlist:not(.is-editing) .stock-main {
     height: 60px;
     grid-template-columns: 78px minmax(0, 1fr);
     gap: 2px 8px;
     padding: 7px 8px 6px;
   }
 
-  :root[data-layout="double"] .watchlist:not(.is-editing) .stock-name {
+  .watchlist:not(.is-editing) .stock-name {
     font-size: 12px;
   }
 
-  :root[data-layout="double"] .watchlist:not(.is-editing) .stock-price {
+  .watchlist:not(.is-editing) .stock-price {
     font-size: 12px;
   }
 
-  :root[data-layout="double"] .watchlist:not(.is-editing) .stock-change {
+  .watchlist:not(.is-editing) .stock-change {
     font-size: 8.5px;
     gap: 3px;
   }
@@ -2694,7 +2654,7 @@ a {
     height: 18px;
   }
 
-  .app-shell[data-layout="double"] .watchlist:not(.is-editing) .stock-main {
+  .watchlist:not(.is-editing) .stock-main {
     height: 48px;
     grid-template-columns: 74px minmax(0, 1fr);
     gap: 1px 6px;
@@ -2716,7 +2676,7 @@ a {
     height: 27px;
   }
 
-  .app-shell[data-layout="double"] .watchlist:not(.is-editing) .stock-main {
+  .watchlist:not(.is-editing) .stock-main {
     height: 46px;
     gap: 0 6px;
     padding: 3px 6px;
@@ -2769,20 +2729,20 @@ a {
     padding-left: 10px;
   }
 
-  :root[data-layout="double"] .watchlist:not(.is-editing) .stock-main {
+  .watchlist:not(.is-editing) .stock-main {
     grid-template-columns: 72px minmax(0, 1fr);
     padding: 4px 6px;
   }
 
-  :root[data-layout="double"] .watchlist:not(.is-editing) .stock-name {
+  .watchlist:not(.is-editing) .stock-name {
     font-size: 11.5px;
   }
 
-  :root[data-layout="double"] .watchlist:not(.is-editing) .stock-price {
+  .watchlist:not(.is-editing) .stock-price {
     font-size: 11.5px;
   }
 
-  :root[data-layout="double"] .watchlist:not(.is-editing) .stock-change {
+  .watchlist:not(.is-editing) .stock-change {
     font-size: 8px;
   }
 

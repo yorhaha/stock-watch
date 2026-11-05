@@ -5,7 +5,7 @@ import { useDailyKline } from "@/hooks/useDailyKline";
 import { useElementWidth } from "@/hooks/useElementWidth";
 import { priceDomain, scaleY } from "@/lib/chart";
 import { computeKline, visibleKline } from "@/lib/kline";
-import { formatPercent, formatPrice, formatVolume, toneOf } from "@/lib/market";
+import { formatIndexPrice, formatPercent, formatPrice, formatVolume, toneOf } from "@/lib/market";
 import type { KlinePoint } from "@/lib/types";
 
 interface DailyKChartProps {
@@ -74,6 +74,8 @@ export function DailyKChart({ secid, name, code, kind = "stock" }: DailyKChartPr
   const yFor = (value: number) =>
     scaleY(value, geometry.domain, geometry.priceHeight, geometry.top);
   const xFor = (index: number) => (index + 0.5) * geometry.slot;
+  const formatValue = (value: number) =>
+    kind === "index" ? formatIndexPrice(value) : formatPrice(value, code);
 
   const ma5Path = linePath(points, (point) => point.ma5, xFor, yFor);
   const ma10Path = linePath(points, (point) => point.ma10, xFor, yFor);
@@ -139,7 +141,7 @@ export function DailyKChart({ secid, name, code, kind = "stock" }: DailyKChartPr
                     y={y + 3}
                     className="detail-axis-label"
                   >
-                    {formatPrice(value, code)}
+                    {formatValue(value)}
                   </text>
                 </g>
               );
@@ -251,19 +253,19 @@ export function DailyKChart({ secid, name, code, kind = "stock" }: DailyKChartPr
               <div className="tooltip-time">{hovered.date}</div>
               <div className="tooltip-row">
                 <span>开盘</span>
-                <strong>{formatPrice(hovered.open, code)}</strong>
+                <strong>{formatValue(hovered.open)}</strong>
               </div>
               <div className="tooltip-row">
                 <span>最高</span>
-                <span>{formatPrice(hovered.high, code)}</span>
+                <span>{formatValue(hovered.high)}</span>
               </div>
               <div className="tooltip-row">
                 <span>最低</span>
-                <span>{formatPrice(hovered.low, code)}</span>
+                <span>{formatValue(hovered.low)}</span>
               </div>
               <div className="tooltip-row">
                 <span>收盘</span>
-                <strong>{formatPrice(hovered.close, code)}</strong>
+                <strong>{formatValue(hovered.close)}</strong>
               </div>
               <div className="tooltip-row">
                 <span>涨跌幅</span>

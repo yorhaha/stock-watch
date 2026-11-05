@@ -114,7 +114,6 @@ export const DEFAULT_PREFERENCES = {
   theme: "auto" as const,
   refreshMs: 5000,
   showPrice: true,
-  layout: "single" as const,
   sort: "manual" as const,
   showIndexValue: true,
 };
@@ -351,13 +350,27 @@ export function pricePrecision(code: string | null | undefined): number {
   return code && isFundCode(code) ? 3 : 2;
 }
 
-export function formatPrice(value: number | null | undefined, code?: string | null): string {
+export function formatPrice(
+  value: number | null | undefined,
+  code?: string | null,
+  digits: number = pricePrecision(code),
+): string {
   if (value == null || !Number.isFinite(value)) return "—";
-  const digits = pricePrecision(code);
   return value.toLocaleString("zh-CN", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
+}
+
+export function formatIndexPrice(value: number | null | undefined): string {
+  return formatPrice(value, null, 0);
+}
+
+export function formatIndexDelta(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  const rounded = Math.round(value);
+  if (rounded === 0) return "0";
+  return `${rounded > 0 ? "+" : ""}${rounded}`;
 }
 
 export function formatPercent(value: number | null | undefined): string {

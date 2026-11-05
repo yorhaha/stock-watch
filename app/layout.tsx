@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin),
   title: "Tape · A 股 / ETF 日内盯盘",
   description:
-    "一列标的，一眼看清。为 A 股与 ETF 日内盯盘设计的极简自选行情页：单行高密度走势、实时价格、指数自定义与批量导入。",
+    "两列标的，一眼看清。为 A 股与 ETF 日内盯盘设计的极简自选行情页：高密度走势、实时价格、指数自定义与批量导入。",
   applicationName: "Tape",
   keywords: ["A股", "ETF", "盯盘", "自选股", "分时图", "股票行情", "Tape"],
   authors: [{ name: "yorhaha", url: "https://github.com/yorhaha" }],
@@ -32,20 +32,20 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: "Tape",
     title: "Tape · A 股 / ETF 日内盯盘",
-    description: "一列标的，一眼看清。克制、安静、足够快的 A 股与 ETF 自选行情。",
+    description: "两列标的，一眼看清。克制、安静、足够快的 A 股与 ETF 自选行情。",
     images: [
       {
         url: ogImageUrl,
         width: 1200,
         height: 630,
-        alt: "Tape — 一列标的，一眼看清。",
+        alt: "Tape — 两列标的，一眼看清。",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Tape · A 股 / ETF 日内盯盘",
-    description: "一列标的，一眼看清。",
+    description: "两列标的，一眼看清。",
     images: [ogImageUrl],
   },
   robots: { index: true, follow: true },
@@ -72,14 +72,12 @@ const themeScript = `
     var theme = mode === "auto" ? (dark ? "dark" : "light") : mode;
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.showPrice = prefs.showPrice === false ? "false" : "true";
-    document.documentElement.dataset.layout = prefs.layout === "double" ? "double" : "single";
     document.documentElement.dataset.showIndexValue = prefs.showIndexValue === false ? "false" : "true";
     document.documentElement.style.colorScheme = theme;
   } catch (error) {
     var fallback = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     document.documentElement.dataset.theme = fallback;
     document.documentElement.dataset.showPrice = "true";
-    document.documentElement.dataset.layout = "single";
     document.documentElement.dataset.showIndexValue = "true";
     document.documentElement.style.colorScheme = fallback;
   }

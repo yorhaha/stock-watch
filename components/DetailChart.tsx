@@ -10,6 +10,7 @@ import {
   toSeries,
 } from "@/lib/chart";
 import {
+  formatIndexPrice,
   formatPrice,
   formatVolume,
   marketProfileFor,
@@ -123,7 +124,8 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
       ((geometry.domain.max - geometry.domain.min) / 3) * index,
   );
 
-  const formatAxis = (value: number) => formatPrice(value, code);
+  const formatValue = (value: number) =>
+    kind === "index" ? formatIndexPrice(value) : formatPrice(value, code);
   const timeLabel = hovered?.time
     ? hovered.time.includes(" ")
       ? hovered.time.split(" ")[1].slice(0, 5)
@@ -165,7 +167,7 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
                     y={y + 3}
                     className="detail-axis-label"
                   >
-                    {formatAxis(value)}
+                    {formatValue(value)}
                   </text>
                 </g>
               );
@@ -305,12 +307,12 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
               <div className="tooltip-time">{timeLabel}</div>
               <div className="tooltip-row">
                 <span>价格</span>
-                <strong>{formatPrice(hovered.price, code)}</strong>
+                <strong>{formatValue(hovered.price)}</strong>
               </div>
               {hovered.average != null ? (
                 <div className="tooltip-row">
                   <span>均价</span>
-                  <span>{formatPrice(hovered.average, code)}</span>
+                  <span>{formatValue(hovered.average)}</span>
                 </div>
               ) : null}
               {geometry.hasVolume ? (

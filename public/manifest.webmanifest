@@ -1,7 +1,7 @@
 {
   "name": "Tape · A 股 / ETF 日内盯盘",
   "short_name": "Tape",
-  "description": "一列标的，一眼看清。A 股与 ETF 极简日内盯盘。",
+  "description": "两列标的，一眼看清。A 股与 ETF 极简日内盯盘。",
   "lang": "zh-CN",
   "start_url": "./",
   "scope": "./",

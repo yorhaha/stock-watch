@@ -49,7 +49,6 @@ export function WatchlistApp() {
     setTheme,
     setRefreshMs,
     setShowPrice,
-    setLayout,
     setSort,
     setShowIndexValue,
   } = usePreferences();
@@ -384,7 +383,6 @@ export function WatchlistApp() {
       data-index-count={indices.length}
       data-show-price={preferences.showPrice ? "true" : "false"}
       data-show-index-value={preferences.showIndexValue ? "true" : "false"}
-      data-layout={preferences.layout}
       data-sort={preferences.sort}
       data-detail-open={detailInstrument ? "true" : "false"}
     >
@@ -439,7 +437,6 @@ export function WatchlistApp() {
                   onTheme={setTheme}
                   onRefresh={setRefreshMs}
                   onShowPrice={setShowPrice}
-                  onLayout={setLayout}
                   onSort={setSort}
                   onShowIndexValue={setShowIndexValue}
                   onManageIndices={openIndexManager}
@@ -524,10 +521,9 @@ export function WatchlistApp() {
             </div>
           ) : (
             <div
-              className={`watchlist ${editing ? "is-editing" : ""} ${preferences.layout === "double" ? "is-double" : ""}`}
+              className={`watchlist ${editing ? "is-editing" : ""}`}
               role="list"
               data-editing={editing}
-              data-layout={preferences.layout}
             >
               {displayStocks.map((stock, index) => {
                 const quote = quotes[stock.secid];

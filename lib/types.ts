@@ -64,14 +64,12 @@ export interface SearchStock extends StockRef {
 }
 
 export type ThemeMode = "auto" | "light" | "dark";
-export type LayoutMode = "single" | "double";
 export type SortMode = "manual" | "change-desc" | "change-asc";
 
 export interface Preferences {
   theme: ThemeMode;
   refreshMs: number;
   showPrice: boolean;
-  layout: LayoutMode;
   sort: SortMode;
   showIndexValue: boolean;
 }

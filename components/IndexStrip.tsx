@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { formatPercent, formatPrice, marketOfSecid, toneOf } from "@/lib/market";
+import { formatIndexPrice, formatPercent, marketOfSecid, toneOf } from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
 import { Sparkline } from "./Sparkline";
 
@@ -46,14 +46,14 @@ export function IndexStrip({ indices, quotes, trends, showValues, onOpen }: Inde
             }}
             aria-label={
               quote
-                ? `${quote.name} ${showValues ? `${formatPrice(quote.price)} ` : ""}${formatPercent(quote.pct)}，打开详情`
+                ? `${quote.name} ${showValues ? `${formatIndexPrice(quote.price)} ` : ""}${formatPercent(quote.pct)}，打开详情`
                 : `${index.name}，打开详情`
             }
           >
             <div className="index-copy">
               <span className="index-name">{quote?.name || index.name}</span>
               {quote ? (
-                <span className="index-value">{formatPrice(quote.price)}</span>
+                <span className="index-value">{formatIndexPrice(quote.price)}</span>
               ) : (
                 <span className="index-value skeleton-text">—</span>
               )}
