@@ -14,6 +14,7 @@ const HOLIDAY_ENDPOINT = "https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@mas
 const CALENDAR_PAGE_SIZE = 500;
 const CALENDAR_MAX_PAGES = 3;
 const CALENDAR_HORIZON_DAYS = 150;
+const UPCOMING_WINDOW_DAYS = 14;
 const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 // Eastmoney's calendar already returns Beijing time; match the headline series
@@ -269,15 +270,15 @@ export async function fetchEconomicEvents(): Promise<EconomicEvent[]> {
   return events;
 }
 
-export function nextEconomicEvents(
+export function upcomingEconomicEvents(
   events: EconomicEvent[],
   now: number,
-  limit = 3,
+  windowDays = UPCOMING_WINDOW_DAYS,
 ): EconomicEvent[] {
+  const cutoff = now + windowDays * 86400000;
   return events
-    .filter((event) => event.startsAt > now)
-    .sort((a, b) => a.startsAt - b.startsAt)
-    .slice(0, limit);
+    .filter((event) => event.startsAt > now && event.startsAt <= cutoff)
+    .sort((a, b) => a.startsAt - b.startsAt);
 }
 
 export function formatEconomicEventDate(startsAt: number): string {

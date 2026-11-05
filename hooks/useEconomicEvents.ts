@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { beijingDay, fetchEconomicEvents, nextEconomicEvents } from "@/lib/events";
+import { beijingDay, fetchEconomicEvents, upcomingEconomicEvents } from "@/lib/events";
 import { STORAGE_KEYS } from "@/lib/market";
 import type { EconomicEvent } from "@/lib/types";
 
@@ -142,7 +142,7 @@ export function useEconomicEvents(): {
     };
   }, []);
 
-  const events = useMemo(() => nextEconomicEvents(allEvents, now), [allEvents, now]);
+  const events = useMemo(() => upcomingEconomicEvents(allEvents, now), [allEvents, now]);
 
   return { events, fetchedAt };
 }
