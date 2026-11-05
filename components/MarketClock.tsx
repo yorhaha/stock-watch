@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getMarketSession } from "@/lib/market";
+import { currentMarketClock } from "@/lib/market";
 import type { SessionInfo } from "@/lib/types";
 
 interface MarketClockProps {
@@ -12,7 +12,7 @@ export function MarketClock({ session }: MarketClockProps) {
   const [clock, setClock] = useState("--:--:--");
 
   useEffect(() => {
-    const tick = () => setClock(getMarketSession().clock);
+    const tick = () => setClock(currentMarketClock());
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);

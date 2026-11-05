@@ -165,7 +165,32 @@ interface TrendRow {
   date: string;
   stamp: string;
   absoluteMinute: number;
-  values: string[];
+  open: string;
+  close: string;
+  volume: string;
+  average: string;
+}
+
+interface TrendFields {
+  time: string;
+  open: string;
+  close: string;
+  volume: string;
+  average: string;
+}
+
+function trendFields(values: string[]): TrendFields | null {
+  // trends2 is asked for f51,f52,f53,f56,f58 (time/open/close/volume/average).
+  // Some hosts may still answer with the legacy eight-column row, so accept both.
+  if (values.length >= 8) {
+    const [time, open, close, , , volume, , average] = values;
+    return { time, open, close, volume, average };
+  }
+  if (values.length >= 5) {
+    const [time, open, close, volume, average] = values;
+    return { time, open, close, volume, average };
+  }
+  return null;
 }
 
 const FUTURES_SESSION_GAP_MINUTES = 30;
@@ -176,9 +201,9 @@ const A50_BREAK_MINUTES =
   A50_TRADING_SESSION.breakEndMinute - A50_TRADING_SESSION.breakStartMinute;
 
 function parseTrendRow(row: string): TrendRow | null {
-  const values = row.split(",");
-  if (values.length < 8) return null;
-  const stamp = values[0];
+  const fields = trendFields(row.split(","));
+  if (!fields) return null;
+  const stamp = fields.time;
   const space = stamp.indexOf(" ");
   const date = space > 0 ? stamp.slice(0, space) : "";
   const clock = space > 0 ? stamp.slice(space + 1) : stamp;
@@ -188,7 +213,15 @@ function parseTrendRow(row: string): TrendRow | null {
   const day =
     Date.UTC(Number(dayMatch[1]), Number(dayMatch[2]) - 1, Number(dayMatch[3])) / 86400000;
   const minute = Number(clockMatch[1]) * 60 + Number(clockMatch[2]);
-  return { date, stamp, absoluteMinute: day * 1440 + minute, values };
+  return {
+    date,
+    stamp,
+    absoluteMinute: day * 1440 + minute,
+    open: fields.open,
+    close: fields.close,
+    volume: fields.volume,
+    average: fields.average,
+  };
 }
 
 function positiveOrNull(value: number | null): number | null {
@@ -196,16 +229,15 @@ function positiveOrNull(value: number | null): number | null {
 }
 
 function pointFromRow(row: TrendRow, minute: number): TrendPoint | null {
-  const [, openValue, closeValue, , , volumeValue, , averageValue] = row.values;
-  const price = numeric(closeValue);
+  const price = numeric(row.close);
   if (price == null || price <= 0) return null;
   return {
     time: row.stamp,
     minute,
     price,
-    average: positiveOrNull(numeric(averageValue)),
-    open: numeric(openValue) ?? price,
-    volume: numeric(volumeValue) ?? 0,
+    average: positiveOrNull(numeric(row.average)),
+    open: numeric(row.open) ?? price,
+    volume: numeric(row.volume) ?? 0,
   };
 }
 
@@ -324,19 +356,18 @@ function trendFromPayload(secid: string, payload: TrendPayload): Trend | null {
   let tradeDate = latestDate;
   for (const row of data.trends) {
     if (latestDate && row.includes(" ") && !row.startsWith(`${latestDate} `)) continue;
-    const values = row.split(",");
-    if (values.length < 8) continue;
-    const [time, openValue, closeValue, , , volumeValue, , averageValue] = values;
-    const price = numeric(closeValue);
+    const fields = trendFields(row.split(","));
+    if (!fields) continue;
+    const price = numeric(fields.close);
     if (price == null) continue;
-    if (!tradeDate && time.includes(" ")) tradeDate = time.split(" ")[0];
+    if (!tradeDate && fields.time.includes(" ")) tradeDate = fields.time.split(" ")[0];
     points.push({
-      time,
-      minute: tradingMinuteFromTime(time, market),
+      time: fields.time,
+      minute: tradingMinuteFromTime(fields.time, market),
       price,
-      average: positiveOrNull(numeric(averageValue)),
-      open: numeric(openValue) ?? price,
-      volume: numeric(volumeValue) ?? 0,
+      average: positiveOrNull(numeric(fields.average)),
+      open: numeric(fields.open) ?? price,
+      volume: numeric(fields.volume) ?? 0,
     });
   }
   if (points.length === 0) return null;
@@ -358,7 +389,7 @@ async function requestTrend(
   const params = new URLSearchParams({
     secid,
     fields1: "f1,f2,f3,f4,f5,f6,f7,f8",
-    fields2: "f51,f52,f53,f54,f55,f56,f57,f58",
+    fields2: "f51,f52,f53,f56,f58",
     iscr: "0",
     ndays: String(ndays),
     ut: QUOTE_TOKEN,

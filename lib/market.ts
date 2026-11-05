@@ -130,6 +130,22 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   hourCycle: "h23",
 });
 
+const clockFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: MARKET_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
+const syncTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
+  timeZone: MARKET_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
 const weekdayMap: Record<string, string> = {
   Sun: "周日",
   Mon: "周一",
@@ -140,6 +156,13 @@ const weekdayMap: Record<string, string> = {
   Sat: "周六",
 };
 
+const HONG_KONG_WINDOWS: Array<[start: number, end: number]> = [
+  [9 * 60 + 30, 12 * 60],
+  [13 * 60, 16 * 60],
+];
+
+const KOREAN_WINDOWS: Array<[start: number, end: number]> = [[8 * 60, 14 * 60 + 30]];
+
 function readParts(now = new Date()) {
   const parts: Record<string, string> = {};
   for (const part of dateTimeFormatter.formatToParts(now)) {
@@ -148,16 +171,25 @@ function readParts(now = new Date()) {
   return parts;
 }
 
+function minutesOf(parts: Record<string, string>): number {
+  return Number(parts.hour ?? "0") * 60 + Number(parts.minute ?? "0");
+}
+
+function isTradingWindowFor(
+  weekday: string,
+  minutes: number,
+  windows: Array<[start: number, end: number]>,
+): boolean {
+  if (weekday === "Sat" || weekday === "Sun") return false;
+  return windows.some(([start, end]) => minutes >= start && minutes < end);
+}
+
 function isTradingWindow(
   now: Date,
   windows: Array<[start: number, end: number]>,
 ): boolean {
   const parts = readParts(now);
-  const weekday = parts.weekday ?? "Mon";
-  if (weekday === "Sat" || weekday === "Sun") return false;
-  const minutes =
-    Number(parts.hour ?? "0") * 60 + Number(parts.minute ?? "0");
-  return windows.some(([start, end]) => minutes >= start && minutes < end);
+  return isTradingWindowFor(parts.weekday ?? "Mon", minutesOf(parts), windows);
 }
 
 export function getMarketSession(now = new Date()): SessionInfo {
@@ -209,32 +241,52 @@ export function getMarketSession(now = new Date()): SessionInfo {
     label,
     isTrading,
     isAuction,
-    isHongKongTrading: isHongKongMarketOpen(now),
-    isKoreanTrading: isKoreanMarketOpen(now),
-    isFuturesTrading: isFuturesMarketOpen(now),
-    isBrentTrading: isBrentMarketOpen(now),
+    isHongKongTrading: isTradingWindowFor(weekday, minutes, HONG_KONG_WINDOWS),
+    isKoreanTrading: isTradingWindowFor(weekday, minutes, KOREAN_WINDOWS),
+    isFuturesTrading: isOvernightSessionOpenFor(
+      weekday,
+      minutes,
+      futuresSessionBounds(now),
+    ),
+    isBrentTrading: isOvernightSessionOpenFor(weekday, minutes, brentSessionBounds(now)),
     clock,
     dateLabel,
     weekday: weekdayMap[weekday] ?? "",
   };
 }
 
+export function currentMarketClock(now = new Date()): string {
+  let hour = "00";
+  let minute = "00";
+  let second = "00";
+  for (const part of clockFormatter.formatToParts(now)) {
+    if (part.type === "hour") hour = part.value;
+    else if (part.type === "minute") minute = part.value;
+    else if (part.type === "second") second = part.value;
+  }
+  return `${hour}:${minute}:${second}`;
+}
+
 export function isHongKongMarketOpen(now = new Date()): boolean {
-  return isTradingWindow(now, [
-    [9 * 60 + 30, 12 * 60],
-    [13 * 60, 16 * 60],
-  ]);
+  return isTradingWindow(now, HONG_KONG_WINDOWS);
 }
 
 export function isKoreanMarketOpen(now = new Date()): boolean {
-  return isTradingWindow(now, [[8 * 60, 14 * 60 + 30]]);
+  return isTradingWindow(now, KOREAN_WINDOWS);
 }
 
+const zoneOffsetFormatters = new Map<string, Intl.DateTimeFormat>();
+
 function zoneOffsetMinutes(now: Date, timeZone: string, fallback: number): number {
-  const zone = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    timeZoneName: "longOffset",
-  })
+  let formatter = zoneOffsetFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      timeZoneName: "longOffset",
+    });
+    zoneOffsetFormatters.set(timeZone, formatter);
+  }
+  const zone = formatter
     .formatToParts(now)
     .find((part) => part.type === "timeZoneName")?.value;
   const match = zone ? /^GMT([+-])(\d{2}):(\d{2})$/.exec(zone) : null;
@@ -267,17 +319,23 @@ function brentSessionBounds(now: Date): { open: number; close: number } {
   };
 }
 
+function isOvernightSessionOpenFor(
+  weekday: string,
+  minutes: number,
+  bounds: { open: number; close: number },
+): boolean {
+  const isWeekday = weekday !== "Sat" && weekday !== "Sun";
+  if (isWeekday && minutes >= bounds.open) return true;
+  const isOvernight = weekday !== "Sun" && weekday !== "Mon";
+  return isOvernight && minutes < bounds.close;
+}
+
 function isOvernightSessionOpen(
   now: Date,
   bounds: { open: number; close: number },
 ): boolean {
   const parts = readParts(now);
-  const weekday = parts.weekday ?? "Mon";
-  const minutes = Number(parts.hour ?? "0") * 60 + Number(parts.minute ?? "0");
-  const isWeekday = weekday !== "Sat" && weekday !== "Sun";
-  if (isWeekday && minutes >= bounds.open) return true;
-  const isOvernight = weekday !== "Sun" && weekday !== "Mon";
-  return isOvernight && minutes < bounds.close;
+  return isOvernightSessionOpenFor(parts.weekday ?? "Mon", minutesOf(parts), bounds);
 }
 
 export function isFuturesMarketOpen(now = new Date()): boolean {
@@ -350,16 +408,31 @@ export function pricePrecision(code: string | null | undefined): number {
   return code && isFundCode(code) ? 3 : 2;
 }
 
+const priceFormatters = new Map<number, Intl.NumberFormat>();
+
+function priceFormatter(digits: number): Intl.NumberFormat {
+  let formatter = priceFormatters.get(digits);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat("zh-CN", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+    priceFormatters.set(digits, formatter);
+  }
+  return formatter;
+}
+
+const integerFormatter = new Intl.NumberFormat("zh-CN", {
+  maximumFractionDigits: 0,
+});
+
 export function formatPrice(
   value: number | null | undefined,
   code?: string | null,
   digits: number = pricePrecision(code),
 ): string {
   if (value == null || !Number.isFinite(value)) return "—";
-  return value.toLocaleString("zh-CN", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
+  return priceFormatter(digits).format(value);
 }
 
 export function formatIndexPrice(value: number | null | undefined): string {
@@ -402,18 +475,12 @@ export function formatVolume(
   const suffix = unit === "hand" ? "手" : "";
   if (Math.abs(value) >= 1e8) return `${(value / 1e8).toFixed(2)}亿${suffix}`;
   if (Math.abs(value) >= 1e4) return `${(value / 1e4).toFixed(2)}万${suffix}`;
-  return `${Math.round(value).toLocaleString("zh-CN")}${suffix}`;
+  return `${integerFormatter.format(Math.round(value))}${suffix}`;
 }
 
 export function formatSyncTime(timestamp: number | null): string {
   if (!timestamp) return "—";
-  return new Intl.DateTimeFormat("zh-CN", {
-    timeZone: MARKET_TIME_ZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  }).format(new Date(timestamp));
+  return syncTimeFormatter.format(new Date(timestamp));
 }
 
 export function toneOf(value: number | null | undefined): "up" | "down" | "flat" {

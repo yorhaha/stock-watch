@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { memo, type CSSProperties } from "react";
 import { formatIndexPrice, formatPercent, marketOfSecid, toneOf } from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
 import { Sparkline } from "./Sparkline";
@@ -13,7 +13,13 @@ interface IndexStripProps {
   onOpen: (index: StockRef) => void;
 }
 
-export function IndexStrip({ indices, quotes, trends, showValues, onOpen }: IndexStripProps) {
+export const IndexStrip = memo(function IndexStrip({
+  indices,
+  quotes,
+  trends,
+  showValues,
+  onOpen,
+}: IndexStripProps) {
   if (indices.length === 0) return null;
   return (
     <section
@@ -69,4 +75,4 @@ export function IndexStrip({ indices, quotes, trends, showValues, onOpen }: Inde
       })}
     </section>
   );
-}
+});

@@ -73,31 +73,111 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
   const xFor = (minute: number) =>
     scaleX(minute, geometry.chartWidth, profile.totalMinutes);
 
-  const line = series
-    .map((point, index) => {
-      const x = xFor(point.minute);
-      const y = yFor(point.price);
-      return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
-    })
-    .join(" ");
-
-  const averageLine = series
-    .filter((point) => point.average != null)
-    .map((point, index) => {
-      const x = xFor(point.minute);
-      const y = yFor(point.average ?? point.price);
-      return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
-    })
-    .join(" ");
+  const paths = useMemo(() => {
+    if (series.length === 0) return { line: "", averageLine: "", area: "" };
+    const line = series
+      .map((point, index) => {
+        const x = scaleX(point.minute, geometry.chartWidth, profile.totalMinutes);
+        const y = scaleY(point.price, geometry.domain, geometry.priceHeight, geometry.top);
+        return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
+      })
+      .join(" ");
+    const averageLine = series
+      .filter((point) => point.average != null)
+      .map((point, index) => {
+        const x = scaleX(point.minute, geometry.chartWidth, profile.totalMinutes);
+        const y = scaleY(
+          point.average ?? point.price,
+          geometry.domain,
+          geometry.priceHeight,
+          geometry.top,
+        );
+        return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
+      })
+      .join(" ");
+    const first = series[0];
+    const last = series[series.length - 1];
+    const bottom = (geometry.top + geometry.priceHeight).toFixed(2);
+    const area = `${line} L${scaleX(last.minute, geometry.chartWidth, profile.totalMinutes).toFixed(2)},${bottom} L${scaleX(first.minute, geometry.chartWidth, profile.totalMinutes).toFixed(2)},${bottom} Z`;
+    return { line, averageLine, area };
+  }, [series, geometry, profile.totalMinutes]);
 
   const first = series[0];
   const last = series[series.length - 1];
-  const area =
-    series.length > 0
-      ? `${line} L${xFor(last.minute).toFixed(2)},${(geometry.top + geometry.priceHeight).toFixed(2)} L${xFor(first.minute).toFixed(2)},${(geometry.top + geometry.priceHeight).toFixed(2)} Z`
-      : "";
   const tone = first && last ? toneOf(last.price - (trend?.preClose ?? first.price)) : "flat";
   const preCloseY = trend?.preClose ? yFor(trend.preClose) : null;
+
+  const volumeBarWidth = Math.max(
+    1,
+    (geometry.chartWidth / profile.totalMinutes) * 0.66,
+  );
+
+  const volumeNodes = useMemo(() => {
+    if (!geometry.hasVolume || !trend) return null;
+    // The last bar follows the live quote's tone, so it is rendered below;
+    // everything else is stable between quote ticks.
+    return trend.points.slice(0, -1).map((point, index) => {
+      const volume = point.volume ?? 0;
+      const barHeight = (volume / geometry.maxVolume) * geometry.volumeHeight;
+      const x =
+        scaleX(point.minute, geometry.chartWidth, profile.totalMinutes) -
+        volumeBarWidth / 2;
+      const y = geometry.volumeTop + geometry.volumeHeight - barHeight;
+      const barTone = toneOf(point.price - point.open);
+      return (
+        <rect
+          key={`${point.minute}-${index}`}
+          x={x.toFixed(2)}
+          y={y.toFixed(2)}
+          width={volumeBarWidth.toFixed(2)}
+          height={Math.max(0.6, barHeight).toFixed(2)}
+          rx="0.4"
+          className={`detail-volume vol-${barTone}`}
+        />
+      );
+    });
+  }, [
+    trend,
+    geometry.chartWidth,
+    geometry.volumeTop,
+    geometry.volumeHeight,
+    geometry.maxVolume,
+    geometry.hasVolume,
+    profile.totalMinutes,
+    volumeBarWidth,
+  ]);
+
+  const lastVolumeNode = useMemo(() => {
+    if (!geometry.hasVolume || series.length === 0) return null;
+    const point = series[series.length - 1];
+    const volume = point.volume ?? 0;
+    const barHeight = (volume / geometry.maxVolume) * geometry.volumeHeight;
+    const x =
+      scaleX(point.minute, geometry.chartWidth, profile.totalMinutes) -
+      volumeBarWidth / 2;
+    const y = geometry.volumeTop + geometry.volumeHeight - barHeight;
+    const barTone = point.open != null ? toneOf(point.price - point.open) : "flat";
+    return (
+      <rect
+        key={`${point.minute}-${series.length - 1}`}
+        x={x.toFixed(2)}
+        y={y.toFixed(2)}
+        width={volumeBarWidth.toFixed(2)}
+        height={Math.max(0.6, barHeight).toFixed(2)}
+        rx="0.4"
+        className={`detail-volume vol-${barTone}`}
+      />
+    );
+  }, [
+    series,
+    geometry.chartWidth,
+    geometry.volumeTop,
+    geometry.volumeHeight,
+    geometry.maxVolume,
+    geometry.hasVolume,
+    profile.totalMinutes,
+    volumeBarWidth,
+  ]);
 
   const hovered = hoverIndex != null ? series[hoverIndex] : null;
   const hoverX = hovered ? xFor(hovered.minute) : 0;
@@ -191,9 +271,9 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
               />
             ) : null}
 
-            <path d={area} fill={`url(#${gradientId})`} />
+            <path d={paths.area} fill={`url(#${gradientId})`} />
             <path
-              d={line}
+              d={paths.line}
               className="detail-price-line"
               fill="none"
               stroke="currentColor"
@@ -201,9 +281,9 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-            {averageLine ? (
+            {paths.averageLine ? (
               <path
-                d={averageLine}
+                d={paths.averageLine}
                 className="detail-average-line"
                 fill="none"
                 strokeWidth="1"
@@ -221,28 +301,8 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
                   y2={geometry.volumeTop}
                   className="detail-volume-divider"
                 />
-                {series.map((point, index) => {
-                  const barWidth = Math.max(
-                    1,
-                    (geometry.chartWidth / profile.totalMinutes) * 0.66,
-                  );
-                  const volume = point.volume ?? 0;
-                  const barHeight = (volume / geometry.maxVolume) * geometry.volumeHeight;
-                  const x = xFor(point.minute) - barWidth / 2;
-                  const y = geometry.volumeTop + geometry.volumeHeight - barHeight;
-                  const barTone = point.open != null ? toneOf(point.price - point.open) : "flat";
-                  return (
-                    <rect
-                      key={`${point.minute}-${index}`}
-                      x={x.toFixed(2)}
-                      y={y.toFixed(2)}
-                      width={barWidth.toFixed(2)}
-                      height={Math.max(0.6, barHeight).toFixed(2)}
-                      rx="0.4"
-                      className={`detail-volume vol-${barTone}`}
-                    />
-                  );
-                })}
+                {volumeNodes}
+                {lastVolumeNode}
               </>
             ) : null}
 

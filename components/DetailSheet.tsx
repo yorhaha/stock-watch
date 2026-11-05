@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useMemo, useRef } from "react";
 import { formatDelta, formatIndexDelta, formatIndexPrice, formatPercent, formatPrice, toneOf } from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
 import { DailyKChart } from "./DailyKChart";
@@ -36,7 +36,10 @@ export function DetailSheet({
   const code = quote?.code || instrument.code;
   const tone = toneOf(quote?.pct);
   const isIndex = kind === "index";
-  const hasAverage = trend == null || trend.points.some((point) => point.average != null);
+  const hasAverage = useMemo(
+    () => trend == null || trend.points.some((point) => point.average != null),
+    [trend],
+  );
 
   useEffect(() => {
     previousFocus.current = document.activeElement as HTMLElement | null;

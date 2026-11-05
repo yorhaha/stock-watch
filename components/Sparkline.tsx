@@ -1,7 +1,15 @@
 "use client";
 
-import { useId } from "react";
-import { areaPath, linePath, priceDomain, scaleY, toSeries } from "@/lib/chart";
+import { memo, useId, useMemo } from "react";
+import {
+  areaPathFromLine,
+  linePath,
+  priceDomain,
+  priceDomainFromRange,
+  priceRange,
+  scaleX,
+  scaleY,
+} from "@/lib/chart";
 import { toneOf } from "@/lib/market";
 import type { Quote, Trend } from "@/lib/types";
 
@@ -11,16 +19,82 @@ interface SparklineProps {
   loading?: boolean;
 }
 
-export function Sparkline({ trend, quote, loading = false }: SparklineProps) {
+const WIDTH = 240;
+const HEIGHT = 44;
+const TOP = 4;
+const DRAW_HEIGHT = HEIGHT - TOP * 2;
+
+export const Sparkline = memo(function Sparkline({
+  trend,
+  quote,
+  loading = false,
+}: SparklineProps) {
   const rawId = useId();
   const gradientId = `spark-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
-  const series = toSeries(trend, quote?.price);
   const preClose = trend?.preClose ?? quote?.preClose ?? null;
-  const height = 44;
-  const top = 4;
-  const drawHeight = height - top * 2;
+  const points = trend?.points;
 
-  if (series.length === 0) {
+  // The trend shape is static between trend polls; only the last point follows
+  // the live quote. Keep the base path and append one segment per tick.
+  const baseRange = useMemo(
+    () => (points ? priceRange(points, 0, points.length - 1) : null),
+    [points],
+  );
+
+  const lastPoint = points?.[points.length - 1];
+  const livePrice =
+    quote?.price != null && Number.isFinite(quote.price) ? quote.price : null;
+  const lastPrice = livePrice ?? lastPoint?.price ?? null;
+  const maxMinute = lastPoint ? Math.max(1, lastPoint.minute) : 1;
+
+  const range = useMemo(() => {
+    if (lastPrice == null || !Number.isFinite(lastPrice) || lastPrice <= 0) {
+      return baseRange;
+    }
+    if (!baseRange) return { min: lastPrice, max: lastPrice };
+    if (lastPrice >= baseRange.min && lastPrice <= baseRange.max) return baseRange;
+    return {
+      min: Math.min(baseRange.min, lastPrice),
+      max: Math.max(baseRange.max, lastPrice),
+    };
+  }, [baseRange, lastPrice]);
+
+  const domain = useMemo(
+    () => (range ? priceDomainFromRange(range) : priceDomain([])),
+    [range],
+  );
+
+  const basePath = useMemo(() => {
+    if (!points || points.length <= 1) return "";
+    return linePath(
+      points.slice(0, -1),
+      WIDTH,
+      DRAW_HEIGHT,
+      domain,
+      (point) => point.price,
+      TOP,
+      maxMinute,
+    );
+  }, [points, domain, maxMinute]);
+
+  const view = useMemo(() => {
+    if (!points || !lastPoint || lastPrice == null) return null;
+    const lastX = scaleX(lastPoint.minute, WIDTH, maxMinute).toFixed(2);
+    const lastY = scaleY(lastPrice, domain, DRAW_HEIGHT, TOP).toFixed(2);
+    const path = basePath ? `${basePath} L${lastX},${lastY}` : `M${lastX},${lastY}`;
+    const area = areaPathFromLine(path, points, WIDTH, DRAW_HEIGHT, TOP, maxMinute);
+    const tone = toneOf(preClose ? lastPrice - preClose : quote?.pct);
+    const baselineY =
+      preClose != null &&
+      Number.isFinite(preClose) &&
+      preClose >= domain.min &&
+      preClose <= domain.max
+        ? scaleY(preClose, domain, DRAW_HEIGHT, TOP)
+        : null;
+    return { path, area, tone, baselineY };
+  }, [points, lastPoint, lastPrice, basePath, domain, maxMinute, preClose, quote?.pct]);
+
+  if (!view) {
     return (
       <div className={`sparkline sparkline-empty ${loading ? "is-loading" : ""}`} aria-hidden="true">
         <span />
@@ -28,31 +102,11 @@ export function Sparkline({ trend, quote, loading = false }: SparklineProps) {
     );
   }
 
-  // Scale to the intraday range so a large gap from yesterday's close cannot
-  // squash the whole day into a thin strip; the baseline is only drawn when it
-  // actually falls inside the visible band.
-  const prices = series.map((point) => point.price);
-  const domain = priceDomain(prices);
-  // Draw the session so far across the full width: leaving the not-yet-traded
-  // afternoon blank made the tiny mobile sparklines read as cut off.
-  const last = series[series.length - 1];
-  const maxMinute = Math.max(1, last.minute);
-  const path = linePath(series, 240, drawHeight, domain, (point) => point.price, top, maxMinute);
-  const area = areaPath(series, 240, drawHeight, domain, top, maxMinute);
-  const tone = toneOf(preClose ? last.price - preClose : quote?.pct);
-  const baselineY =
-    preClose != null &&
-    Number.isFinite(preClose) &&
-    preClose >= domain.min &&
-    preClose <= domain.max
-      ? scaleY(preClose, domain, drawHeight, top)
-      : null;
-
   return (
-    <div className={`sparkline tone-${tone}`} aria-hidden="true">
+    <div className={`sparkline tone-${view.tone}`} aria-hidden="true">
       <svg
         className="sparkline-svg"
-        viewBox={`0 0 240 ${height}`}
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         preserveAspectRatio="none"
       >
         <defs>
@@ -61,20 +115,20 @@ export function Sparkline({ trend, quote, loading = false }: SparklineProps) {
             <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
           </linearGradient>
         </defs>
-        {baselineY != null ? (
+        {view.baselineY != null ? (
           <line
             className="spark-baseline"
             x1="0"
-            x2="240"
-            y1={baselineY}
-            y2={baselineY}
+            x2={WIDTH}
+            y1={view.baselineY}
+            y2={view.baselineY}
             vectorEffect="non-scaling-stroke"
           />
         ) : null}
-        <path d={area} fill={`url(#${gradientId})`} />
+        <path d={view.area} fill={`url(#${gradientId})`} />
         <path
           className="spark-line"
-          d={path}
+          d={view.path}
           fill="none"
           stroke="currentColor"
           strokeWidth="1.2"
@@ -85,4 +139,4 @@ export function Sparkline({ trend, quote, loading = false }: SparklineProps) {
       </svg>
     </div>
   );
-}
+});

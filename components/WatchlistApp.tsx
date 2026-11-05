@@ -41,9 +41,24 @@ interface Toast {
 }
 
 export function WatchlistApp() {
-  const { stocks, hydrated, add, addMany, insert, remove, move, toggleHeld } = useWatchlist();
-  const { indices, add: addIndex, remove: removeIndex, move: moveIndex, replace: replaceIndices } =
-    useIndices();
+  const {
+    stocks,
+    hydrated: stocksHydrated,
+    add,
+    addMany,
+    insert,
+    remove,
+    move,
+    toggleHeld,
+  } = useWatchlist();
+  const {
+    indices,
+    hydrated: indicesHydrated,
+    add: addIndex,
+    remove: removeIndex,
+    move: moveIndex,
+    replace: replaceIndices,
+  } = useIndices();
   const {
     preferences,
     setTheme,
@@ -79,16 +94,21 @@ export function WatchlistApp() {
     (hasKoreanIndex && session.isKoreanTrading) ||
     (hasFuturesIndex && session.isFuturesTrading) ||
     (hasBrentIndex && session.isBrentTrading);
+  const ready = stocksHydrated && indicesHydrated;
   const { quotes, trends, status, error, lastSyncedAt, refresh } = useMarketData(
     stockSecids,
     indexSecids,
     activeMarket,
     preferences.refreshMs,
+    session,
+    ready,
   );
   const displayStocks = useMemo(
     () => sortStocksByChange(stocks, quotes, preferences.sort),
     [stocks, quotes, preferences.sort],
   );
+  const displayStocksRef = useRef(displayStocks);
+  displayStocksRef.current = displayStocks;
 
   const [focusedSecid, setFocusedSecid] = useState<string | null>(null);
   const [detailTarget, setDetailTarget] = useState<
@@ -283,24 +303,18 @@ export function WatchlistApp() {
     replaceIndices(sortStocksByChange(indices, quotes, "change-desc"));
   }, [indices, quotes, replaceIndices]);
 
-  const focusRelative = useCallback(
-    (direction: 1 | -1) => {
-      setFocusedSecid((current) => {
-        if (displayStocks.length === 0) return null;
-        const index = current
-          ? displayStocks.findIndex((stock) => stock.secid === current)
-          : -1;
-        if (index === -1) {
-          return direction === 1
-            ? displayStocks[0].secid
-            : displayStocks[displayStocks.length - 1].secid;
-        }
-        const next = Math.max(0, Math.min(displayStocks.length - 1, index + direction));
-        return displayStocks[next].secid;
-      });
-    },
-    [displayStocks],
-  );
+  const focusRelative = useCallback((direction: 1 | -1) => {
+    const list = displayStocksRef.current;
+    setFocusedSecid((current) => {
+      if (list.length === 0) return null;
+      const index = current ? list.findIndex((stock) => stock.secid === current) : -1;
+      if (index === -1) {
+        return direction === 1 ? list[0].secid : list[list.length - 1].secid;
+      }
+      const next = Math.max(0, Math.min(list.length - 1, index + direction));
+      return list[next].secid;
+    });
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -501,7 +515,7 @@ export function WatchlistApp() {
             </div>
           </div>
 
-          {!hydrated ? (
+          {!stocksHydrated ? (
             <div className="list-skeleton" aria-hidden="true">
               {Array.from({ length: 5 }).map((_, index) => (
                 <div className="skeleton-row" key={index}>

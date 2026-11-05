@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { memo, useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useDailyKline } from "@/hooks/useDailyKline";
 import { useElementWidth } from "@/hooks/useElementWidth";
 import { priceDomain, scaleY } from "@/lib/chart";
@@ -30,7 +30,12 @@ function linePath(
   return path;
 }
 
-export function DailyKChart({ secid, name, code, kind = "stock" }: DailyKChartProps) {
+export const DailyKChart = memo(function DailyKChart({
+  secid,
+  name,
+  code,
+  kind = "stock",
+}: DailyKChartProps) {
   const [containerRef, width] = useElementWidth<HTMLDivElement>();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const { candles, loading, error, retry } = useDailyKline(secid);
@@ -77,13 +82,70 @@ export function DailyKChart({ secid, name, code, kind = "stock" }: DailyKChartPr
   const formatValue = (value: number) =>
     kind === "index" ? formatIndexPrice(value) : formatPrice(value, code);
 
-  const ma5Path = linePath(points, (point) => point.ma5, xFor, yFor);
-  const ma10Path = linePath(points, (point) => point.ma10, xFor, yFor);
-  const t70Path = linePath(points, (point) => point.t70, xFor, yFor);
-  const t30Path = linePath(points, (point) => point.t30, xFor, yFor);
+  const paths = useMemo(
+    () => ({
+      ma5: linePath(points, (point) => point.ma5, xFor, yFor),
+      ma10: linePath(points, (point) => point.ma10, xFor, yFor),
+      t70: linePath(points, (point) => point.t70, xFor, yFor),
+      t30: linePath(points, (point) => point.t30, xFor, yFor),
+    }),
+    [points, geometry],
+  );
 
   const bodyWidth = Math.max(1, Math.min(7, geometry.slot * 0.62));
   const volumeWidth = Math.max(0.8, Math.min(6.5, geometry.slot * 0.58));
+
+  const candleNodes = useMemo(
+    () =>
+      points.map((point, index) => {
+        const tone = toneOf(point.close - point.open);
+        const x = xFor(index);
+        const bodyTop = yFor(Math.max(point.open, point.close));
+        const bodyBottom = yFor(Math.min(point.open, point.close));
+        return (
+          <g key={point.date} className={`k-candle tone-${tone}`}>
+            <line
+              x1={x}
+              x2={x}
+              y1={yFor(point.high)}
+              y2={yFor(point.low)}
+              className="k-wick"
+            />
+            <rect
+              x={(x - bodyWidth / 2).toFixed(2)}
+              y={bodyTop.toFixed(2)}
+              width={bodyWidth.toFixed(2)}
+              height={Math.max(0.9, bodyBottom - bodyTop).toFixed(2)}
+              rx={bodyWidth > 3 ? 0.6 : 0}
+              className="k-body"
+            />
+          </g>
+        );
+      }),
+    [points, geometry, bodyWidth],
+  );
+
+  const volumeNodes = useMemo(
+    () =>
+      points.map((point, index) => {
+        const tone = toneOf(point.close - point.open);
+        const barHeight = (point.volume / geometry.maxVolume) * geometry.volumeHeight;
+        const x = xFor(index) - volumeWidth / 2;
+        const y = geometry.volumeTop + geometry.volumeHeight - barHeight;
+        return (
+          <rect
+            key={`volume-${point.date}`}
+            x={x.toFixed(2)}
+            y={y.toFixed(2)}
+            width={volumeWidth.toFixed(2)}
+            height={Math.max(0.6, barHeight).toFixed(2)}
+            rx="0.4"
+            className={`k-volume tone-${tone}`}
+          />
+        );
+      }),
+    [points, geometry, volumeWidth],
+  );
 
   const hovered = hoverIndex != null ? points[hoverIndex] : null;
   const hoverX = hovered && hoverIndex != null ? xFor(hoverIndex) : 0;
@@ -147,36 +209,12 @@ export function DailyKChart({ secid, name, code, kind = "stock" }: DailyKChartPr
               );
             })}
 
-            {points.map((point, index) => {
-              const tone = toneOf(point.close - point.open);
-              const x = xFor(index);
-              const bodyTop = yFor(Math.max(point.open, point.close));
-              const bodyBottom = yFor(Math.min(point.open, point.close));
-              return (
-                <g key={point.date} className={`k-candle tone-${tone}`}>
-                  <line
-                    x1={x}
-                    x2={x}
-                    y1={yFor(point.high)}
-                    y2={yFor(point.low)}
-                    className="k-wick"
-                  />
-                  <rect
-                    x={(x - bodyWidth / 2).toFixed(2)}
-                    y={bodyTop.toFixed(2)}
-                    width={bodyWidth.toFixed(2)}
-                    height={Math.max(0.9, bodyBottom - bodyTop).toFixed(2)}
-                    rx={bodyWidth > 3 ? 0.6 : 0}
-                    className="k-body"
-                  />
-                </g>
-              );
-            })}
+            {candleNodes}
 
-            <path d={ma5Path} className="k-line ma5" />
-            <path d={ma10Path} className="k-line ma10" />
-            <path d={t70Path} className="k-line t70" />
-            <path d={t30Path} className="k-line t30" />
+            <path d={paths.ma5} className="k-line ma5" />
+            <path d={paths.ma10} className="k-line ma10" />
+            <path d={paths.t70} className="k-line t70" />
+            <path d={paths.t30} className="k-line t30" />
 
             <line
               x1="0"
@@ -185,23 +223,7 @@ export function DailyKChart({ secid, name, code, kind = "stock" }: DailyKChartPr
               y2={geometry.volumeTop}
               className="detail-volume-divider"
             />
-            {points.map((point, index) => {
-              const tone = toneOf(point.close - point.open);
-              const barHeight = (point.volume / geometry.maxVolume) * geometry.volumeHeight;
-              const x = xFor(index) - volumeWidth / 2;
-              const y = geometry.volumeTop + geometry.volumeHeight - barHeight;
-              return (
-                <rect
-                  key={`volume-${point.date}`}
-                  x={x.toFixed(2)}
-                  y={y.toFixed(2)}
-                  width={volumeWidth.toFixed(2)}
-                  height={Math.max(0.6, barHeight).toFixed(2)}
-                  rx="0.4"
-                  className={`k-volume tone-${tone}`}
-                />
-              );
-            })}
+            {volumeNodes}
 
             {hovered ? (
               <line
@@ -292,4 +314,4 @@ export function DailyKChart({ secid, name, code, kind = "stock" }: DailyKChartPr
       )}
     </div>
   );
-}
+});
