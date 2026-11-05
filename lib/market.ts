@@ -80,7 +80,6 @@ export const DEFAULT_PREFERENCES = {
   theme: "auto" as const,
   refreshMs: 5000,
   showPrice: true,
-  changeBackground: false,
   layout: "single" as const,
   sort: "manual" as const,
   showIndexValue: true,

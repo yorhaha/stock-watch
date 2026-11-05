@@ -71,7 +71,6 @@ export interface Preferences {
   theme: ThemeMode;
   refreshMs: number;
   showPrice: boolean;
-  changeBackground: boolean;
   layout: LayoutMode;
   sort: SortMode;
   showIndexValue: boolean;

@@ -12,7 +12,6 @@ interface SettingsPopoverProps {
   onTheme: (theme: ThemeMode) => void;
   onRefresh: (refreshMs: number) => void;
   onShowPrice: (showPrice: boolean) => void;
-  onChangeBackground: (enabled: boolean) => void;
   onLayout: (layout: LayoutMode) => void;
   onSort: (sort: SortMode) => void;
   onShowIndexValue: (show: boolean) => void;
@@ -42,7 +41,6 @@ export function SettingsPopover({
   onTheme,
   onRefresh,
   onShowPrice,
-  onChangeBackground,
   onLayout,
   onSort,
   onShowIndexValue,
@@ -151,28 +149,6 @@ export function SettingsPopover({
           >
             管理
             <ChevronRightIcon size={12} />
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-row">
-        <span className="settings-label">色块</span>
-        <div className="segmented" role="group" aria-label="涨跌幅背景色块">
-          <button
-            type="button"
-            className={!preferences.changeBackground ? "is-selected" : ""}
-            aria-pressed={!preferences.changeBackground}
-            onClick={() => onChangeBackground(false)}
-          >
-            关
-          </button>
-          <button
-            type="button"
-            className={preferences.changeBackground ? "is-selected" : ""}
-            aria-pressed={preferences.changeBackground}
-            onClick={() => onChangeBackground(true)}
-          >
-            开
           </button>
         </div>
       </div>

@@ -2016,9 +2016,9 @@ a {
   grid-template-columns: 180px minmax(0, 1fr) 76px;
 }
 
-:root[data-change-bg="true"] .stock-change .tone-text,
-:root[data-change-bg="true"] .index-change,
-:root[data-change-bg="true"] .detail-percent {
+.stock-change .tone-text,
+.index-change,
+.detail-percent {
   padding: 2px 5px;
   border-radius: var(--radius-chip);
   background: color-mix(in srgb, currentColor 11%, transparent);
@@ -2786,7 +2786,7 @@ a {
     font-size: 8px;
   }
 
-  :root[data-change-bg="true"] .index-change {
+  .index-change {
     padding: 1.5px 3px;
   }
 }

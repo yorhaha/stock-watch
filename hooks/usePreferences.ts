@@ -18,7 +18,6 @@ function readPreferences(): Preferences {
         ? Number(parsed.refreshMs)
         : DEFAULT_PREFERENCES.refreshMs,
       showPrice: parsed.showPrice !== false,
-      changeBackground: parsed.changeBackground === true,
       layout: parsed.layout === "double" ? "double" : "single",
       sort:
         parsed.sort === "change-desc" || parsed.sort === "change-asc"
@@ -42,7 +41,6 @@ export function usePreferences() {
     const resolved = prefs.theme === "auto" ? (systemDark ? "dark" : "light") : prefs.theme;
     document.documentElement.dataset.theme = resolved;
     document.documentElement.dataset.showPrice = prefs.showPrice ? "true" : "false";
-    document.documentElement.dataset.changeBg = prefs.changeBackground ? "true" : "false";
     document.documentElement.dataset.layout = prefs.layout;
     document.documentElement.dataset.showIndexValue = prefs.showIndexValue ? "true" : "false";
     document.documentElement.style.colorScheme = resolved;
@@ -85,10 +83,6 @@ export function usePreferences() {
     setPreferences((current) => ({ ...current, showPrice }));
   }, []);
 
-  const setChangeBackground = useCallback((changeBackground: boolean) => {
-    setPreferences((current) => ({ ...current, changeBackground }));
-  }, []);
-
   const setLayout = useCallback((layout: LayoutMode) => {
     setPreferences((current) => ({ ...current, layout }));
   }, []);
@@ -106,7 +100,6 @@ export function usePreferences() {
     setTheme,
     setRefreshMs,
     setShowPrice,
-    setChangeBackground,
     setLayout,
     setSort,
     setShowIndexValue,

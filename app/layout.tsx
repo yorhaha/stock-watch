@@ -72,7 +72,6 @@ const themeScript = `
     var theme = mode === "auto" ? (dark ? "dark" : "light") : mode;
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.showPrice = prefs.showPrice === false ? "false" : "true";
-    document.documentElement.dataset.changeBg = prefs.changeBackground === true ? "true" : "false";
     document.documentElement.dataset.layout = prefs.layout === "double" ? "double" : "single";
     document.documentElement.dataset.showIndexValue = prefs.showIndexValue === false ? "false" : "true";
     document.documentElement.style.colorScheme = theme;
@@ -80,7 +79,6 @@ const themeScript = `
     var fallback = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     document.documentElement.dataset.theme = fallback;
     document.documentElement.dataset.showPrice = "true";
-    document.documentElement.dataset.changeBg = "false";
     document.documentElement.dataset.layout = "single";
     document.documentElement.dataset.showIndexValue = "true";
     document.documentElement.style.colorScheme = fallback;

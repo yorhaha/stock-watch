@@ -47,7 +47,6 @@ export function WatchlistApp() {
     setTheme,
     setRefreshMs,
     setShowPrice,
-    setChangeBackground,
     setLayout,
     setSort,
     setShowIndexValue,
@@ -372,7 +371,6 @@ export function WatchlistApp() {
       data-index-count={indices.length}
       data-show-price={preferences.showPrice ? "true" : "false"}
       data-show-index-value={preferences.showIndexValue ? "true" : "false"}
-      data-change-bg={preferences.changeBackground ? "true" : "false"}
       data-layout={preferences.layout}
       data-sort={preferences.sort}
       data-detail-open={detailInstrument ? "true" : "false"}
@@ -428,7 +426,6 @@ export function WatchlistApp() {
                   onTheme={setTheme}
                   onRefresh={setRefreshMs}
                   onShowPrice={setShowPrice}
-                  onChangeBackground={setChangeBackground}
                   onLayout={setLayout}
                   onSort={setSort}
                   onShowIndexValue={setShowIndexValue}

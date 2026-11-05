@@ -34,11 +34,11 @@
 - **批量导入**：粘贴多行文本，每行一个股票或 ETF 名称；自动识别、去重，并标记已在自选、未找到、多个匹配与超出上限的条目。
 - **自选管理**：拖动排序，或使用上下箭头调整；移除后可在 Toast 中撤销。
 - **明暗主题**：自动跟随系统，也可手动固定浅色 / 深色。
-- **显示自定义**：隐藏价格、隐藏指数数值、为涨跌幅增加背景色块、切换单列 / 双列，全部即时生效并保存。
+- **显示自定义**：隐藏价格、隐藏指数数值、切换单列 / 双列，全部即时生效并保存；涨跌幅始终以红绿色块呈现。
 - **键盘操作**：`⌘K` / `/` 添加，`↑` `↓` 浏览，`↵` 打开详情，`Esc` 关闭。
 - **移动优先**：导航与市场时钟合并为单行；手机端以 40px 行高呈现行情，短屏设备进一步压缩行高，优先保证列表密度。
 - **没有多余说明文字**：主界面只保留数据、标题与操作图标；只有输入与识别结果需要辨认时才出现功能标签。
-- **Agent 可读**：行情行与指数暴露 `data-secid`、`data-code`、`data-price`、`data-pct`、`data-status`、`data-market-phase`、`data-show-price`、`data-show-index-value`、`data-change-bg`、`data-layout`、`data-sort`、`data-index-count` 等稳定属性，便于自动化检查与 AI Agent 读取。
+- **Agent 可读**：行情行与指数暴露 `data-secid`、`data-code`、`data-price`、`data-pct`、`data-status`、`data-market-phase`、`data-show-price`、`data-show-index-value`、`data-layout`、`data-sort`、`data-index-count` 等稳定属性，便于自动化检查与 AI Agent 读取。
 - **纯静态**：Next.js 静态导出，无服务端、无数据库，直接部署 GitHub Pages。
 
 ## 预览
@@ -57,7 +57,7 @@
 <p align="center">
   <img src="docs/tape-batch.png" width="320" alt="Tape 批量导入识别结果" />
   <img src="docs/tape-index.png" width="320" alt="Tape 自定义指数并隐藏数值" />
-  <img src="docs/tape-focus.png" width="320" alt="隐藏价格并开启涨跌幅背景色块" />
+  <img src="docs/tape-focus.png" width="320" alt="隐藏价格" />
 </p>
 
 ## 本地运行
