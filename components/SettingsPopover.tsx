@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { ColorMode, LayoutMode, Preferences, ThemeMode } from "@/lib/types";
+import type { LayoutMode, Preferences, ThemeMode } from "@/lib/types";
 import { ChevronRightIcon } from "./Icons";
 
 interface SettingsPopoverProps {
@@ -9,7 +9,6 @@ interface SettingsPopoverProps {
   preferences: Preferences;
   onClose: () => void;
   onTheme: (theme: ThemeMode) => void;
-  onColors: (colors: ColorMode) => void;
   onRefresh: (refreshMs: number) => void;
   onShowPrice: (showPrice: boolean) => void;
   onChangeBackground: (enabled: boolean) => void;
@@ -25,11 +24,6 @@ const themeOptions: { value: ThemeMode; label: string }[] = [
   { value: "dark", label: "深色" },
 ];
 
-const colorOptions: { value: ColorMode; label: string }[] = [
-  { value: "cn", label: "红涨绿跌" },
-  { value: "intl", label: "绿涨红跌" },
-];
-
 const refreshOptions = [3000, 5000, 10000];
 
 export function SettingsPopover({
@@ -37,7 +31,6 @@ export function SettingsPopover({
   preferences,
   onClose,
   onTheme,
-  onColors,
   onRefresh,
   onShowPrice,
   onChangeBackground,
@@ -92,27 +85,6 @@ export function SettingsPopover({
               onClick={() => onTheme(option.value)}
             >
               {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="settings-row">
-        <span className="settings-label">涨跌</span>
-        <div className="segmented color-segmented" role="group" aria-label="涨跌颜色">
-          {colorOptions.map((option) => (
-            <button
-              type="button"
-              key={option.value}
-              className={preferences.colors === option.value ? "is-selected" : ""}
-              aria-label={option.label}
-              aria-pressed={preferences.colors === option.value}
-              onClick={() => onColors(option.value)}
-            >
-              <span className={`color-sample ${option.value}`} aria-hidden="true">
-                <span>↑</span>
-                <span>↓</span>
-              </span>
             </button>
           ))}
         </div>

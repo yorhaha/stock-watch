@@ -42,13 +42,11 @@ export interface SearchStock extends StockRef {
 }
 
 export type ThemeMode = "auto" | "light" | "dark";
-export type ColorMode = "cn" | "intl";
 export type LayoutMode = "single" | "double";
 export type SortMode = "manual" | "change-desc" | "change-asc";
 
 export interface Preferences {
   theme: ThemeMode;
-  colors: ColorMode;
   refreshMs: number;
   showPrice: boolean;
   changeBackground: boolean;

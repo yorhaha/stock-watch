@@ -56,7 +56,6 @@ export const STORAGE_KEYS = {
 
 export const DEFAULT_PREFERENCES = {
   theme: "auto" as const,
-  colors: "cn" as const,
   refreshMs: 5000,
   showPrice: true,
   changeBackground: false,

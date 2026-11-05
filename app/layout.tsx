@@ -70,9 +70,7 @@ const themeScript = `
     var mode = prefs.theme === "light" || prefs.theme === "dark" ? prefs.theme : "auto";
     var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     var theme = mode === "auto" ? (dark ? "dark" : "light") : mode;
-    var colors = prefs.colors === "intl" ? "intl" : "cn";
     document.documentElement.dataset.theme = theme;
-    document.documentElement.dataset.colors = colors;
     document.documentElement.dataset.showPrice = prefs.showPrice === false ? "false" : "true";
     document.documentElement.dataset.changeBg = prefs.changeBackground === true ? "true" : "false";
     document.documentElement.dataset.layout = prefs.layout === "double" ? "double" : "single";
@@ -81,7 +79,6 @@ const themeScript = `
   } catch (error) {
     var fallback = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     document.documentElement.dataset.theme = fallback;
-    document.documentElement.dataset.colors = "cn";
     document.documentElement.dataset.showPrice = "true";
     document.documentElement.dataset.changeBg = "false";
     document.documentElement.dataset.layout = "single";

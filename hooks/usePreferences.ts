@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_PREFERENCES, STORAGE_KEYS } from "@/lib/market";
-import type { ColorMode, LayoutMode, Preferences, SortMode, ThemeMode } from "@/lib/types";
+import type { LayoutMode, Preferences, SortMode, ThemeMode } from "@/lib/types";
 
 function readPreferences(): Preferences {
   try {
@@ -14,7 +14,6 @@ function readPreferences(): Preferences {
         parsed.theme === "light" || parsed.theme === "dark" || parsed.theme === "auto"
           ? parsed.theme
           : DEFAULT_PREFERENCES.theme,
-      colors: parsed.colors === "intl" ? "intl" : "cn",
       refreshMs: [3000, 5000, 10000].includes(Number(parsed.refreshMs))
         ? Number(parsed.refreshMs)
         : DEFAULT_PREFERENCES.refreshMs,
@@ -42,7 +41,6 @@ export function usePreferences() {
       window.matchMedia("(prefers-color-scheme: dark)").matches;
     const resolved = prefs.theme === "auto" ? (systemDark ? "dark" : "light") : prefs.theme;
     document.documentElement.dataset.theme = resolved;
-    document.documentElement.dataset.colors = prefs.colors;
     document.documentElement.dataset.showPrice = prefs.showPrice ? "true" : "false";
     document.documentElement.dataset.changeBg = prefs.changeBackground ? "true" : "false";
     document.documentElement.dataset.layout = prefs.layout;
@@ -79,10 +77,6 @@ export function usePreferences() {
     setPreferences((current) => ({ ...current, theme }));
   }, []);
 
-  const setColors = useCallback((colors: ColorMode) => {
-    setPreferences((current) => ({ ...current, colors }));
-  }, []);
-
   const setRefreshMs = useCallback((refreshMs: number) => {
     setPreferences((current) => ({ ...current, refreshMs }));
   }, []);
@@ -110,7 +104,6 @@ export function usePreferences() {
   return {
     preferences,
     setTheme,
-    setColors,
     setRefreshMs,
     setShowPrice,
     setChangeBackground,

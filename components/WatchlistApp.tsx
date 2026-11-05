@@ -44,7 +44,6 @@ export function WatchlistApp() {
   const {
     preferences,
     setTheme,
-    setColors,
     setRefreshMs,
     setShowPrice,
     setChangeBackground,
@@ -418,7 +417,6 @@ export function WatchlistApp() {
                   indexCount={indices.length}
                   onClose={closeSettings}
                   onTheme={setTheme}
-                  onColors={setColors}
                   onRefresh={setRefreshMs}
                   onShowPrice={setShowPrice}
                   onChangeBackground={setChangeBackground}

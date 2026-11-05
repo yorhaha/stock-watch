@@ -183,7 +183,7 @@ export function DetailChart({ trend, quote, name, code }: DetailChartProps) {
               className="detail-price-line"
               fill="none"
               stroke="currentColor"
-              strokeWidth="1.6"
+              strokeWidth="1.3"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -192,7 +192,7 @@ export function DetailChart({ trend, quote, name, code }: DetailChartProps) {
                 d={averageLine}
                 className="detail-average-line"
                 fill="none"
-                strokeWidth="1.1"
+                strokeWidth="1"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />

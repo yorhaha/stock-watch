@@ -31,7 +31,11 @@ export function IndexStrip({ indices, quotes, trends, showValues }: IndexStripPr
             data-secid={index.secid}
             data-price={quote?.price ?? ""}
             data-pct={quote?.pct ?? ""}
-            aria-label={quote && showValues ? `${quote.name} ${formatPrice(quote.price)} ${formatPercent(quote.pct)}` : index.name}
+            aria-label={
+              quote
+                ? `${quote.name} ${showValues ? `${formatPrice(quote.price)} ` : ""}${formatPercent(quote.pct)}`
+                : index.name
+            }
           >
             <div className="index-copy">
               <span className="index-name">{quote?.name || index.name}</span>
