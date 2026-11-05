@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { areaPath, linePath, priceDomain, scaleX, scaleY, toSeries } from "@/lib/chart";
+import { areaPath, linePath, priceDomain, scaleY, toSeries } from "@/lib/chart";
 import { toneOf } from "@/lib/market";
 import type { Quote, Trend } from "@/lib/types";
 
@@ -40,8 +40,6 @@ export function Sparkline({ trend, quote, loading = false }: SparklineProps) {
   const path = linePath(series, 240, drawHeight, domain, (point) => point.price, top, maxMinute);
   const area = areaPath(series, 240, drawHeight, domain, top, maxMinute);
   const tone = toneOf(preClose ? last.price - preClose : quote?.pct);
-  const lastX = (scaleX(last.minute, 240, maxMinute) / 240) * 100;
-  const lastY = (scaleY(last.price, domain, drawHeight, top) / height) * 100;
   const baselineY =
     preClose != null &&
     Number.isFinite(preClose) &&
@@ -85,10 +83,6 @@ export function Sparkline({ trend, quote, loading = false }: SparklineProps) {
           vectorEffect="non-scaling-stroke"
         />
       </svg>
-      <span
-        className="spark-dot"
-        style={{ left: `${Math.min(99.6, lastX)}%`, top: `${lastY}%` }}
-      />
     </div>
   );
 }
