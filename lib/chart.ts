@@ -67,11 +67,12 @@ export function linePath(
   domain: Domain,
   accessor: (point: SeriesPoint) => number,
   top = 0,
+  maxMinute = 240,
 ): string {
   if (points.length === 0) return "";
   return points
     .map((point, index) => {
-      const x = scaleX(point.minute, width);
+      const x = scaleX(point.minute, width, maxMinute);
       const y = scaleY(accessor(point), domain, height, top);
       return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
     })
@@ -84,13 +85,14 @@ export function areaPath(
   height: number,
   domain: Domain,
   top = 0,
+  maxMinute = 240,
 ): string {
   if (points.length === 0) return "";
-  const line = linePath(points, width, height, domain, (point) => point.price, top);
+  const line = linePath(points, width, height, domain, (point) => point.price, top, maxMinute);
   const first = points[0];
   const last = points[points.length - 1];
-  const firstX = scaleX(first.minute, width);
-  const lastX = scaleX(last.minute, width);
+  const firstX = scaleX(first.minute, width, maxMinute);
+  const lastX = scaleX(last.minute, width, maxMinute);
   const bottom = top + height;
   return `${line} L${lastX.toFixed(2)},${bottom.toFixed(2)} L${firstX.toFixed(2)},${bottom.toFixed(2)} Z`;
 }

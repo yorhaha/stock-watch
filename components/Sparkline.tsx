@@ -33,11 +33,14 @@ export function Sparkline({ trend, quote, loading = false }: SparklineProps) {
   // actually falls inside the visible band.
   const prices = series.map((point) => point.price);
   const domain = priceDomain(prices);
-  const path = linePath(series, 240, drawHeight, domain, (point) => point.price, top);
-  const area = areaPath(series, 240, drawHeight, domain, top);
+  // Draw the session so far across the full width: leaving the not-yet-traded
+  // afternoon blank made the tiny mobile sparklines read as cut off.
   const last = series[series.length - 1];
+  const maxMinute = Math.max(1, last.minute);
+  const path = linePath(series, 240, drawHeight, domain, (point) => point.price, top, maxMinute);
+  const area = areaPath(series, 240, drawHeight, domain, top, maxMinute);
   const tone = toneOf(preClose ? last.price - preClose : quote?.pct);
-  const lastX = (scaleX(last.minute, 240) / 240) * 100;
+  const lastX = (scaleX(last.minute, 240, maxMinute) / 240) * 100;
   const lastY = (scaleY(last.price, domain, drawHeight, top) / height) * 100;
   const baselineY =
     preClose != null &&
