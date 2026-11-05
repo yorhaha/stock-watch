@@ -20,6 +20,7 @@ function sanitize(value: unknown): StockRef[] {
       secid,
       code,
       name: String(candidate.name ?? code),
+      ...(candidate.held === true ? { held: true } : {}),
     });
     if (stocks.length >= WATCHLIST_LIMIT) break;
   }
@@ -85,6 +86,14 @@ export function useWatchlist() {
     setStocks((current) => current.filter((stock) => stock.secid !== secid));
   }, []);
 
+  const toggleHeld = useCallback((secid: string) => {
+    setStocks((current) =>
+      current.map((stock) =>
+        stock.secid === secid ? { ...stock, held: stock.held !== true } : stock,
+      ),
+    );
+  }, []);
+
   const move = useCallback((from: number, to: number) => {
     setStocks((current) => {
       if (
@@ -103,5 +112,5 @@ export function useWatchlist() {
     });
   }, []);
 
-  return { stocks, hydrated, add, addMany, insert, remove, move };
+  return { stocks, hydrated, add, addMany, insert, remove, move, toggleHeld };
 }

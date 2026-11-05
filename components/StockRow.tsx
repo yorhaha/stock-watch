@@ -13,6 +13,7 @@ interface StockRowProps {
   index: number;
   active: boolean;
   editing: boolean;
+  held: boolean;
   first: boolean;
   last: boolean;
   dragOver: boolean;
@@ -37,6 +38,7 @@ export const StockRow = memo(function StockRow({
   index,
   active,
   editing,
+  held,
   first,
   last,
   dragOver,
@@ -55,7 +57,7 @@ export const StockRow = memo(function StockRow({
   if (editing) {
     return (
       <div
-        className={`stock-row edit-row ${dragOver ? "is-drag-over" : ""}`}
+        className={`stock-row edit-row ${held ? "is-held" : ""} ${dragOver ? "is-drag-over" : ""}`}
         draggable
         onDragStart={() => onDragStart(index)}
         onDragOver={(event) => onDragOver(event, index)}
@@ -108,13 +110,14 @@ export const StockRow = memo(function StockRow({
 
   return (
     <div
-      className={`stock-row tone-${tone} ${active ? "is-active" : ""}`}
+      className={`stock-row tone-${tone} ${held ? "is-held" : ""} ${active ? "is-active" : ""}`}
       id={`stock-${stock.secid}`}
       data-secid={stock.secid}
       data-code={stock.code}
       data-price={quote?.price ?? ""}
       data-pct={quote?.pct ?? ""}
       data-tone={tone}
+      data-held={held ? "true" : "false"}
       role="listitem"
     >
       <div
@@ -122,7 +125,7 @@ export const StockRow = memo(function StockRow({
         role="button"
         tabIndex={0}
         aria-haspopup="dialog"
-        aria-label={`${name}，最新价 ${formatPrice(quote?.price, stock.code)}，${formatPercent(quote?.pct)}，查看分时`}
+        aria-label={`${name}，最新价 ${formatPrice(quote?.price, stock.code)}，${formatPercent(quote?.pct)}${held ? "，持有" : ""}，查看分时`}
         onClick={() => onOpen(stock)}
         onFocus={() => onActivate(stock)}
         onKeyDown={(event) => {

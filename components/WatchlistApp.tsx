@@ -38,7 +38,7 @@ interface Toast {
 }
 
 export function WatchlistApp() {
-  const { stocks, hydrated, add, addMany, insert, remove, move } = useWatchlist();
+  const { stocks, hydrated, add, addMany, insert, remove, move, toggleHeld } = useWatchlist();
   const { indices, add: addIndex, remove: removeIndex, move: moveIndex, replace: replaceIndices } =
     useIndices();
   const {
@@ -535,6 +535,7 @@ export function WatchlistApp() {
                     index={index}
                     active={focusedSecid === stock.secid}
                     editing={editing}
+                    held={stock.held === true}
                     first={index === 0}
                     last={index === displayStocks.length - 1}
                     dragOver={dragOver === index && dragIndex !== index}
@@ -560,6 +561,8 @@ export function WatchlistApp() {
           stock={detailStock}
           quote={quotes[detailStock.secid]}
           trend={trends[detailStock.secid]}
+          held={detailStock.held === true}
+          onToggleHeld={toggleHeld}
           onClose={closeDetail}
         />
       ) : null}

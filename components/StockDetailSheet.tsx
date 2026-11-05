@@ -10,16 +10,25 @@ import {
 } from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
 import { DetailChart } from "./DetailChart";
-import { CloseIcon } from "./Icons";
+import { BookmarkIcon, CloseIcon } from "./Icons";
 
 interface StockDetailSheetProps {
   stock: StockRef;
   quote?: Quote;
   trend?: Trend;
+  held: boolean;
+  onToggleHeld: (secid: string) => void;
   onClose: () => void;
 }
 
-export function StockDetailSheet({ stock, quote, trend, onClose }: StockDetailSheetProps) {
+export function StockDetailSheet({
+  stock,
+  quote,
+  trend,
+  held,
+  onToggleHeld,
+  onClose,
+}: StockDetailSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
@@ -82,6 +91,17 @@ export function StockDetailSheet({ stock, quote, trend, onClose }: StockDetailSh
             <span className="detail-sheet-name" id={titleId}>
               {name}
             </span>
+            <button
+              type="button"
+              className={`hold-toggle ${held ? "is-held" : ""}`}
+              onClick={() => onToggleHeld(stock.secid)}
+              aria-pressed={held}
+              aria-label={held ? `取消持有 ${name}` : `标记 ${name} 为持有`}
+              title={held ? "取消持有标记" : "标记为持有"}
+            >
+              <BookmarkIcon size={11} />
+              <span>持有</span>
+            </button>
           </div>
           <div className={`detail-sheet-quote tone-${tone}`}>
             <span className="detail-sheet-price">{formatPrice(quote?.price, code)}</span>

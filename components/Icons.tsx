@@ -159,3 +159,11 @@ export function ChevronRightIcon(props: IconProps) {
     </IconBase>
   );
 }
+
+export function BookmarkIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M6.8 4.6h10.4v14.9L12 15.6l-5.2 3.9V4.6Z" />
+    </IconBase>
+  );
+}

@@ -24,6 +24,9 @@
   --live: #238764;
   --focus: #5f6b7c;
   --warn: #b47a2e;
+  --hold: #8a6516;
+  --hold-bg: color-mix(in srgb, #b18838 9%, transparent);
+  --hold-bg-strong: color-mix(in srgb, #b18838 15%, transparent);
   --radius-chip: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -55,6 +58,9 @@
   --live: #46c78d;
   --focus: #aab4c2;
   --warn: #d5a153;
+  --hold: #d8ad5a;
+  --hold-bg: color-mix(in srgb, #d0a24a 11%, transparent);
+  --hold-bg-strong: color-mix(in srgb, #d0a24a 18%, transparent);
   --shadow-color: rgba(0, 0, 0, 0.45);
   --brand-ink: #0b0c0d;
   --topbar: rgba(11, 12, 13, 0.76);
@@ -594,6 +600,15 @@ a {
   background: var(--active);
 }
 
+.stock-row.is-held {
+  background: var(--hold-bg);
+}
+
+.stock-row.is-held:hover,
+.stock-row.is-held.is-active {
+  background: var(--hold-bg-strong);
+}
+
 .stock-main {
   display: grid;
   height: 52px;
@@ -823,6 +838,7 @@ a {
 .detail-sheet-identity {
   display: flex;
   min-width: 0;
+  align-items: center;
   padding-top: 1px;
 }
 
@@ -837,6 +853,47 @@ a {
   white-space: nowrap;
 }
 
+.hold-toggle {
+  display: inline-flex;
+  height: 21px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3px;
+  margin-left: 8px;
+  padding: 0 6px 0 5px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 9.5px;
+  font-weight: 520;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background 140ms ease,
+    border-color 140ms ease;
+}
+
+.hold-toggle:hover {
+  border-color: var(--line-strong);
+  background: var(--hover);
+  color: var(--text-2);
+}
+
+.hold-toggle.is-held {
+  border-color: color-mix(in srgb, var(--hold) 26%, transparent);
+  background: var(--hold-bg);
+  color: var(--hold);
+}
+
+.hold-toggle.is-held:hover {
+  background: var(--hold-bg-strong);
+}
+
+.hold-toggle.is-held svg {
+  fill: currentColor;
+}
 
 .detail-sheet-quote {
   display: flex;
@@ -1951,6 +2008,11 @@ a {
 
 :root[data-layout="double"] .watchlist:not(.is-editing) .stock-row:last-child {
   border-bottom: 1px solid var(--line);
+}
+
+:root[data-layout="double"] .watchlist:not(.is-editing) .stock-row.is-held {
+  background-color: var(--surface);
+  background-image: linear-gradient(var(--hold-bg), var(--hold-bg));
 }
 
 :root[data-layout="double"] .watchlist:not(.is-editing) .stock-main {

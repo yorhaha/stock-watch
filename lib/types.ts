@@ -2,6 +2,7 @@ export interface StockRef {
   secid: string;
   code: string;
   name: string;
+  held?: boolean;
 }
 
 export interface Quote {
