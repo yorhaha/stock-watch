@@ -10,9 +10,9 @@ import {
   toSeries,
 } from "@/lib/chart";
 import {
-  MARKET_PROFILES,
   formatPrice,
   formatVolume,
+  marketProfileFor,
   toneOf,
 } from "@/lib/market";
 import type { Quote, Trend } from "@/lib/types";
@@ -32,7 +32,7 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
   const gradientId = `detail-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   const series = useMemo(() => toSeries(trend, quote?.price), [trend, quote?.price]);
-  const profile = MARKET_PROFILES[trend?.market ?? "cn"];
+  const profile = marketProfileFor(trend);
   const geometry = useMemo(() => {
     const right = width > 0 && width < 440 ? 48 : 60;
     const top = 14;
@@ -41,7 +41,6 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
     const volumeHeight = 42;
     const chartWidth = Math.max(40, width - right);
     const volumeTop = top + priceHeight + volumeGap;
-    const height = volumeTop + volumeHeight + 26;
     const values = series.flatMap((point) =>
       point.average == null ? [point.price] : [point.price, point.average],
     );
@@ -49,6 +48,9 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
     const domain = priceDomain(values, trend?.preClose);
     const volumes = series.map((point) => point.volume ?? 0);
     const maxVolume = Math.max(...volumes, 1);
+    const hasVolume = volumes.some((value) => value > 0);
+    const plotBottom = hasVolume ? volumeTop + volumeHeight : top + priceHeight;
+    const height = plotBottom + 26;
     return {
       right,
       top,
@@ -56,6 +58,8 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
       volumeGap,
       volumeHeight,
       volumeTop,
+      plotBottom,
+      hasVolume,
       height,
       chartWidth,
       domain,
@@ -65,7 +69,8 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
 
   const yFor = (value: number) =>
     scaleY(value, geometry.domain, geometry.priceHeight, geometry.top);
-  const xFor = (minute: number) => scaleX(minute, geometry.chartWidth);
+  const xFor = (minute: number) =>
+    scaleX(minute, geometry.chartWidth, profile.totalMinutes);
 
   const line = series
     .map((point, index) => {
@@ -170,7 +175,7 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
               x1={geometry.chartWidth / 2}
               x2={geometry.chartWidth / 2}
               y1={geometry.top}
-              y2={geometry.volumeTop + geometry.volumeHeight}
+              y2={geometry.plotBottom}
               className="detail-center-line"
             />
 
@@ -205,35 +210,39 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
               />
             ) : null}
 
-            <line
-              x1="0"
-              x2={geometry.chartWidth}
-              y1={geometry.volumeTop}
-              y2={geometry.volumeTop}
-              className="detail-volume-divider"
-            />
-            {series.map((point, index) => {
-              const barWidth = Math.max(
-                1,
-                (geometry.chartWidth / profile.totalMinutes) * 0.66,
-              );
-              const volume = point.volume ?? 0;
-              const barHeight = (volume / geometry.maxVolume) * geometry.volumeHeight;
-              const x = xFor(point.minute) - barWidth / 2;
-              const y = geometry.volumeTop + geometry.volumeHeight - barHeight;
-              const barTone = point.open != null ? toneOf(point.price - point.open) : "flat";
-              return (
-                <rect
-                  key={`${point.minute}-${index}`}
-                  x={x.toFixed(2)}
-                  y={y.toFixed(2)}
-                  width={barWidth.toFixed(2)}
-                  height={Math.max(0.6, barHeight).toFixed(2)}
-                  rx="0.4"
-                  className={`detail-volume vol-${barTone}`}
+            {geometry.hasVolume ? (
+              <>
+                <line
+                  x1="0"
+                  x2={geometry.chartWidth}
+                  y1={geometry.volumeTop}
+                  y2={geometry.volumeTop}
+                  className="detail-volume-divider"
                 />
-              );
-            })}
+                {series.map((point, index) => {
+                  const barWidth = Math.max(
+                    1,
+                    (geometry.chartWidth / profile.totalMinutes) * 0.66,
+                  );
+                  const volume = point.volume ?? 0;
+                  const barHeight = (volume / geometry.maxVolume) * geometry.volumeHeight;
+                  const x = xFor(point.minute) - barWidth / 2;
+                  const y = geometry.volumeTop + geometry.volumeHeight - barHeight;
+                  const barTone = point.open != null ? toneOf(point.price - point.open) : "flat";
+                  return (
+                    <rect
+                      key={`${point.minute}-${index}`}
+                      x={x.toFixed(2)}
+                      y={y.toFixed(2)}
+                      width={barWidth.toFixed(2)}
+                      height={Math.max(0.6, barHeight).toFixed(2)}
+                      rx="0.4"
+                      className={`detail-volume vol-${barTone}`}
+                    />
+                  );
+                })}
+              </>
+            ) : null}
 
             {hovered ? (
               <g>
@@ -241,7 +250,7 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
                   x1={hoverX}
                   x2={hoverX}
                   y1={geometry.top}
-                  y2={geometry.volumeTop + geometry.volumeHeight}
+                  y2={geometry.plotBottom}
                   className="detail-crosshair"
                 />
                 <circle
@@ -278,7 +287,7 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
               x="0"
               y={geometry.top}
               width={geometry.chartWidth}
-              height={geometry.volumeTop + geometry.volumeHeight - geometry.top}
+              height={geometry.plotBottom - geometry.top}
               fill="transparent"
               onPointerMove={onPointerMove}
               onPointerLeave={() => setHoverIndex(null)}
@@ -298,14 +307,18 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
                 <span>价格</span>
                 <strong>{formatPrice(hovered.price, code)}</strong>
               </div>
-              <div className="tooltip-row">
-                <span>均价</span>
-                <span>{formatPrice(hovered.average, code)}</span>
-              </div>
-              <div className="tooltip-row">
-                <span>成交量</span>
-                <span>{formatVolume(hovered.volume, kind === "index" ? "count" : "hand")}</span>
-              </div>
+              {hovered.average != null ? (
+                <div className="tooltip-row">
+                  <span>均价</span>
+                  <span>{formatPrice(hovered.average, code)}</span>
+                </div>
+              ) : null}
+              {geometry.hasVolume ? (
+                <div className="tooltip-row">
+                  <span>成交量</span>
+                  <span>{formatVolume(hovered.volume, kind === "index" ? "count" : "hand")}</span>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </>

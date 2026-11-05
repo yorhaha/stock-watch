@@ -19,7 +19,7 @@ export function toSeries(trend: Trend | undefined, livePrice?: number | null): S
   const points: SeriesPoint[] = trend.points.map((point: TrendPoint) => ({
     minute: point.minute,
     price: point.price,
-    average: point.average,
+    average: point.average ?? undefined,
     volume: point.volume,
     open: point.open,
     time: point.time,

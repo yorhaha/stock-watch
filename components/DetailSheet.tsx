@@ -35,6 +35,7 @@ export function DetailSheet({
   const name = quote?.name || instrument.name;
   const code = quote?.code || instrument.code;
   const tone = toneOf(quote?.pct);
+  const hasAverage = trend == null || trend.points.some((point) => point.average != null);
 
   useEffect(() => {
     previousFocus.current = document.activeElement as HTMLElement | null;
@@ -133,10 +134,12 @@ export function DetailSheet({
                     <i className="legend-line price" />
                     价格
                   </span>
-                  <span className="legend">
-                    <i className="legend-line average" />
-                    均价
-                  </span>
+                  {hasAverage ? (
+                    <span className="legend">
+                      <i className="legend-line average" />
+                      均价
+                    </span>
+                  ) : null}
                 </span>
               </div>
               <DetailChart trend={trend} quote={quote} name={name} code={code} kind={kind} />

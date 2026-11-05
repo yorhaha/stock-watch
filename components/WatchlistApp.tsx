@@ -10,6 +10,7 @@ import {
   WATCHLIST_LIMIT,
   formatSyncTime,
   formatTradeDate,
+  isFuturesIndex,
   isHongKongIndex,
   isKoreanIndex,
   sortStocksByChange,
@@ -63,11 +64,16 @@ export function WatchlistApp() {
     () => indices.some((index) => isKoreanIndex(index.secid)),
     [indices],
   );
+  const hasFuturesIndex = useMemo(
+    () => indices.some((index) => isFuturesIndex(index.secid)),
+    [indices],
+  );
   const activeMarket =
     session.isTrading ||
     session.isAuction ||
     (hasHongKongIndex && session.isHongKongTrading) ||
-    (hasKoreanIndex && session.isKoreanTrading);
+    (hasKoreanIndex && session.isKoreanTrading) ||
+    (hasFuturesIndex && session.isFuturesTrading);
   const { quotes, trends, status, error, lastSyncedAt, refresh } = useMarketData(
     stockSecids,
     indexSecids,
@@ -99,10 +105,11 @@ export function WatchlistApp() {
       const trend = trends[item.secid];
       const last = trend?.points[trend.points.length - 1];
       if (!trend?.tradeDate || !last) continue;
-      const raw = last.time.includes(" ") ? last.time.split(" ")[1] : last.time;
-      const pointTime = raw.slice(0, 5);
-      if (trend.tradeDate > date || (trend.tradeDate === date && pointTime > time)) {
-        date = trend.tradeDate;
+      const stamp = last.time.includes(" ") ? last.time.split(" ") : null;
+      const pointDate = stamp ? stamp[0] : trend.tradeDate;
+      const pointTime = (stamp ? stamp[1] : last.time).slice(0, 5);
+      if (pointDate > date || (pointDate === date && pointTime > time)) {
+        date = pointDate;
         time = pointTime;
       }
     }

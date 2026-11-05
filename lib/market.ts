@@ -1,17 +1,20 @@
-import type { MarketKind, Quote, SessionInfo, SortMode, StockRef } from "./types";
+import type { MarketKind, Quote, SessionInfo, SortMode, StockRef, Trend } from "./types";
 
 export const MARKET_TIME_ZONE = "Asia/Shanghai";
 
 export const WATCHLIST_LIMIT = 30;
 export const INDEX_LIMIT = 6;
 
-export const MARKET_PROFILES: Record<
-  MarketKind,
-  { totalMinutes: number; axisLabels: [string, string, string] }
-> = {
+export interface MarketProfile {
+  totalMinutes: number;
+  axisLabels: [string, string, string];
+}
+
+export const MARKET_PROFILES: Record<MarketKind, MarketProfile> = {
   cn: { totalMinutes: 240, axisLabels: ["09:30", "11:30 / 13:00", "15:00"] },
   hk: { totalMinutes: 330, axisLabels: ["09:30", "12:00 / 13:00", "16:00"] },
   kr: { totalMinutes: 390, axisLabels: ["08:00", "11:15", "14:30"] },
+  fut: { totalMinutes: 1380, axisLabels: ["07:00", "18:30", "06:00"] },
 };
 
 export const DEFAULT_STOCKS: StockRef[] = [
@@ -50,6 +53,8 @@ export const INDEX_CATALOG: StockRef[] = [
   { secid: "124.HSTECH", code: "HSTECH", name: "恒生科技指数" },
   { secid: "100.KS11", code: "KS11", name: "韩国KOSPI" },
   { secid: "100.KOSPI200", code: "KOSPI200", name: "韩国KOSPI200" },
+  { secid: "103.NQ00Y", code: "NQ00Y", name: "小型纳指当月连续" },
+  { secid: "101.GC00Y", code: "GC00Y", name: "COMEX黄金" },
 ];
 
 export const POPULAR_STOCKS: StockRef[] = [
@@ -178,6 +183,7 @@ export function getMarketSession(now = new Date()): SessionInfo {
     isAuction,
     isHongKongTrading: isHongKongMarketOpen(now),
     isKoreanTrading: isKoreanMarketOpen(now),
+    isFuturesTrading: isFuturesMarketOpen(now),
     clock,
     dateLabel,
     weekday: weekdayMap[weekday] ?? "",
@@ -195,13 +201,49 @@ export function isKoreanMarketOpen(now = new Date()): boolean {
   return isTradingWindow(now, [[8 * 60, 14 * 60 + 30]]);
 }
 
+function usEasternOffsetMinutes(now: Date): number {
+  const zone = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    timeZoneName: "longOffset",
+  })
+    .formatToParts(now)
+    .find((part) => part.type === "timeZoneName")?.value;
+  const match = zone ? /^GMT([+-])(\d{2}):(\d{2})$/.exec(zone) : null;
+  if (!match) return -5 * 60;
+  const sign = match[1] === "-" ? -1 : 1;
+  return sign * (Number(match[2]) * 60 + Number(match[3]));
+}
+
+function futuresSessionBounds(now: Date): { open: number; close: number } {
+  const beijing = 8 * 60 - usEasternOffsetMinutes(now);
+  return {
+    open: (18 * 60 + beijing) % 1440,
+    close: (17 * 60 + beijing) % 1440,
+  };
+}
+
+export function isFuturesMarketOpen(now = new Date()): boolean {
+  const parts = readParts(now);
+  const weekday = parts.weekday ?? "Mon";
+  const minutes = Number(parts.hour ?? "0") * 60 + Number(parts.minute ?? "0");
+  const { open, close } = futuresSessionBounds(now);
+  const isWeekday = weekday !== "Sat" && weekday !== "Sun";
+  if (isWeekday && minutes >= open) return true;
+  const isOvernight = weekday !== "Sun" && weekday !== "Mon";
+  return isOvernight && minutes < close;
+}
+
+function minuteOfTime(value: string): number {
+  const time = value.includes(" ") ? value.split(" ")[1] : value;
+  const [hour, minute] = time.split(":").map(Number);
+  return (hour || 0) * 60 + (minute || 0);
+}
+
 export function tradingMinuteFromTime(
   value: string,
   market: MarketKind = "cn",
 ): number {
-  const time = value.includes(" ") ? value.split(" ")[1] : value;
-  const [hour, minute] = time.split(":").map(Number);
-  const total = hour * 60 + minute;
+  const total = minuteOfTime(value);
   if (market === "hk") {
     if (total <= 12 * 60) {
       return Math.max(0, Math.min(150, total - (9 * 60 + 30)));
@@ -215,6 +257,26 @@ export function tradingMinuteFromTime(
     return Math.max(0, Math.min(120, total - (9 * 60 + 30)));
   }
   return Math.max(120, Math.min(240, 120 + total - 13 * 60));
+}
+
+function clockFromMinute(value: number): string {
+  const minute = ((Math.round(value) % 1440) + 1440) % 1440;
+  const hour = String(Math.floor(minute / 60)).padStart(2, "0");
+  return `${hour}:${String(minute % 60).padStart(2, "0")}`;
+}
+
+export function marketProfileFor(trend?: Trend | null): MarketProfile {
+  const profile = MARKET_PROFILES[trend?.market ?? "cn"];
+  if (trend?.market !== "fut" || trend.points.length === 0) return profile;
+  const start = minuteOfTime(trend.points[0].time);
+  return {
+    totalMinutes: profile.totalMinutes,
+    axisLabels: [
+      clockFromMinute(start),
+      clockFromMinute(start + profile.totalMinutes / 2),
+      clockFromMinute(start + profile.totalMinutes),
+    ],
+  };
 }
 
 export function formatTradeDate(value: string): string {
@@ -302,10 +364,12 @@ export function isIndexCode(code: string): boolean {
 
 const HONG_KONG_INDEX_SECIDS = new Set(["100.HSI", "124.HSTECH"]);
 const KOREAN_INDEX_SECIDS = new Set(["100.KS11", "100.KOSPI200"]);
+const FUTURES_INDEX_SECIDS = new Set(["103.NQ00Y", "101.GC00Y"]);
 
 export function marketOfSecid(secid: string): MarketKind {
   if (HONG_KONG_INDEX_SECIDS.has(secid)) return "hk";
   if (KOREAN_INDEX_SECIDS.has(secid)) return "kr";
+  if (FUTURES_INDEX_SECIDS.has(secid)) return "fut";
   return "cn";
 }
 
@@ -317,11 +381,16 @@ export function isKoreanIndex(secid: string): boolean {
   return KOREAN_INDEX_SECIDS.has(secid);
 }
 
+export function isFuturesIndex(secid: string): boolean {
+  return FUTURES_INDEX_SECIDS.has(secid);
+}
+
 export function isSupportedIndex(secid: string, code: string): boolean {
   return (
     (/^[01]\.\d{6}$/.test(secid) && isIndexCode(code)) ||
     isHongKongIndex(secid) ||
-    isKoreanIndex(secid)
+    isKoreanIndex(secid) ||
+    isFuturesIndex(secid)
   );
 }
 

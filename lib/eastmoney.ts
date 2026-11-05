@@ -4,7 +4,7 @@ import {
   marketOfSecid,
   tradingMinuteFromTime,
 } from "./market";
-import type { Candle, Quote, SearchStock, Trend, TrendPoint } from "./types";
+import type { Candle, MarketKind, Quote, SearchStock, Trend, TrendPoint } from "./types";
 
 const QUOTE_ENDPOINT = "https://push2.eastmoney.com/api/qt/ulist.np/get";
 const QUOTE_FALLBACK_ENDPOINT =
@@ -50,7 +50,10 @@ function numeric(value: Primitive): number | null {
 function quoteFromRaw(raw: RawRecord): Quote | null {
   const code = String(raw.f12 ?? "");
   const market = raw.f13;
-  if (!code || (market !== 0 && market !== 1 && market !== 100 && market !== 124)) {
+  if (
+    !code ||
+    (market !== 0 && market !== 1 && market !== 100 && market !== 124 && market !== 101 && market !== 103)
+  ) {
     return null;
   }
   const rawPrice = numeric(raw.f2);
@@ -158,10 +161,96 @@ interface TrendPayload {
   } | null;
 }
 
+interface TrendRow {
+  date: string;
+  stamp: string;
+  absoluteMinute: number;
+  values: string[];
+}
+
+const FUTURES_SESSION_GAP_MINUTES = 30;
+const FUTURES_TOTAL_MINUTES = 1380;
+
+function parseTrendRow(row: string): TrendRow | null {
+  const values = row.split(",");
+  if (values.length < 8) return null;
+  const stamp = values[0];
+  const space = stamp.indexOf(" ");
+  const date = space > 0 ? stamp.slice(0, space) : "";
+  const clock = space > 0 ? stamp.slice(space + 1) : stamp;
+  const dayMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  const clockMatch = /^(\d{1,2}):(\d{2})/.exec(clock);
+  if (!dayMatch || !clockMatch) return null;
+  const day =
+    Date.UTC(Number(dayMatch[1]), Number(dayMatch[2]) - 1, Number(dayMatch[3])) / 86400000;
+  const minute = Number(clockMatch[1]) * 60 + Number(clockMatch[2]);
+  return { date, stamp, absoluteMinute: day * 1440 + minute, values };
+}
+
+function positiveOrNull(value: number | null): number | null {
+  return value != null && value > 0 ? value : null;
+}
+
+function pointFromRow(row: TrendRow, minute: number): TrendPoint | null {
+  const [, openValue, closeValue, , , volumeValue, , averageValue] = row.values;
+  const price = numeric(closeValue);
+  if (price == null || price <= 0) return null;
+  return {
+    time: row.stamp,
+    minute,
+    price,
+    average: positiveOrNull(numeric(averageValue)),
+    open: numeric(openValue) ?? price,
+    volume: numeric(volumeValue) ?? 0,
+  };
+}
+
+function futuresTrendFromPayload(
+  secid: string,
+  market: MarketKind,
+  data: NonNullable<TrendPayload["data"]>,
+): Trend | null {
+  const rows: TrendRow[] = [];
+  for (const row of data.trends ?? []) {
+    const parsed = parseTrendRow(row);
+    if (parsed) rows.push(parsed);
+  }
+  if (rows.length === 0) return null;
+
+  // A session runs 23 hours and crosses midnight, so split on the maintenance
+  // break gap rather than on the calendar date.
+  let sessionStart = 0;
+  for (let index = 1; index < rows.length; index += 1) {
+    const gap = rows[index].absoluteMinute - rows[index - 1].absoluteMinute;
+    if (gap > FUTURES_SESSION_GAP_MINUTES) sessionStart = index;
+  }
+  const start = rows[sessionStart];
+
+  const points: TrendPoint[] = [];
+  for (let index = sessionStart; index < rows.length; index += 1) {
+    const row = rows[index];
+    const minute = Math.max(
+      0,
+      Math.min(FUTURES_TOTAL_MINUTES, row.absoluteMinute - start.absoluteMinute),
+    );
+    const point = pointFromRow(row, minute);
+    if (point) points.push(point);
+  }
+  if (points.length === 0) return null;
+
+  const preClose =
+    typeof data.preClose === "number" && data.preClose > 0
+      ? data.preClose
+      : points[0].open;
+
+  return { secid, market, tradeDate: start.date, preClose, points };
+}
+
 function trendFromPayload(secid: string, payload: TrendPayload): Trend | null {
   const data = payload.data;
   if (!data?.trends?.length) return null;
   const market = marketOfSecid(secid);
+  if (market === "fut") return futuresTrendFromPayload(secid, market, data);
 
   const datedRows = data.trends.filter((row) => row.includes(" "));
   const latestDate = datedRows.length > 0
@@ -181,7 +270,7 @@ function trendFromPayload(secid: string, payload: TrendPayload): Trend | null {
       time,
       minute: tradingMinuteFromTime(time, market),
       price,
-      average: numeric(averageValue) ?? price,
+      average: positiveOrNull(numeric(averageValue)),
       open: numeric(openValue) ?? price,
       volume: numeric(volumeValue) ?? 0,
     });
@@ -219,8 +308,8 @@ async function requestTrend(
 }
 
 export async function fetchTrend(secid: string, signal?: AbortSignal): Promise<Trend | null> {
-  const primary =
-    marketOfSecid(secid) === "cn" ? TREND_ENDPOINT : TREND_DELAY_ENDPOINT;
+  const market = marketOfSecid(secid);
+  const primary = market === "cn" || market === "fut" ? TREND_ENDPOINT : TREND_DELAY_ENDPOINT;
 
   try {
     const trend = await requestTrend(primary, secid, 1, signal);
