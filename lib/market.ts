@@ -65,8 +65,13 @@ export const DEFAULT_STOCKS: StockRef[] = [
 
 export const DEFAULT_INDICES: StockRef[] = [
   { secid: "1.000001", code: "000001", name: "上证指数" },
-  { secid: "0.399001", code: "399001", name: "深证成指" },
+  { secid: "1.000688", code: "000688", name: "科创50" },
   { secid: "0.399006", code: "399006", name: "创业板指" },
+  { secid: "100.KS11", code: "KS11", name: "韩国KOSPI" },
+  { secid: "104.CN00Y", code: "CN00Y", name: "A50期指当月连续" },
+  { secid: "101.GC00Y", code: "GC00Y", name: "COMEX黄金" },
+  { secid: "103.NQ00Y", code: "NQ00Y", name: "小型纳指当月连续" },
+  { secid: "112.B00Y", code: "B00Y", name: "布伦特原油当月连续" },
 ];
 
 export const INDEX_CATALOG: StockRef[] = [
