@@ -28,9 +28,11 @@ export function Sparkline({ trend, quote, loading = false }: SparklineProps) {
     );
   }
 
+  // Scale to the intraday range so a large gap from yesterday's close cannot
+  // squash the whole day into a thin strip; the baseline is only drawn when it
+  // actually falls inside the visible band.
   const prices = series.map((point) => point.price);
-  if (trend?.preClose) prices.push(trend.preClose);
-  const domain = priceDomain(prices, preClose ?? undefined);
+  const domain = priceDomain(prices);
   const path = linePath(series, 240, drawHeight, domain, (point) => point.price, top);
   const area = areaPath(series, 240, drawHeight, domain, top);
   const last = series[series.length - 1];
@@ -38,7 +40,10 @@ export function Sparkline({ trend, quote, loading = false }: SparklineProps) {
   const lastX = (scaleX(last.minute, 240) / 240) * 100;
   const lastY = (scaleY(last.price, domain, drawHeight, top) / height) * 100;
   const baselineY =
-    preClose != null && Number.isFinite(preClose)
+    preClose != null &&
+    Number.isFinite(preClose) &&
+    preClose >= domain.min &&
+    preClose <= domain.max
       ? scaleY(preClose, domain, drawHeight, top)
       : null;
 
