@@ -1017,10 +1017,43 @@ a {
   font-weight: 450;
 }
 
-.detail-sheet-change .detail-pe {
+.detail-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-top: 16px;
+  padding-top: 13px;
+  border-top: 1px solid var(--line);
+}
+
+.stat {
+  min-width: 0;
+  padding: 0 13px;
+  border-left: 1px solid var(--line);
+}
+
+.stat:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.stat-label {
+  display: block;
+  margin-bottom: 4px;
   color: var(--text-3);
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 450;
+  letter-spacing: 0.015em;
+}
+
+.stat-value {
+  display: block;
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 520;
+  letter-spacing: -0.005em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2661,6 +2694,32 @@ a {
 
   .detail-sheet-body {
     padding: 2px 14px 20px;
+  }
+
+  .detail-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 0;
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+
+  .stat {
+    padding: 0 8px;
+  }
+
+  .stat:nth-child(3n + 1) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .stat-label {
+    margin-bottom: 3px;
+    font-size: 8px;
+    letter-spacing: 0;
+  }
+
+  .stat-value {
+    font-size: 10px;
   }
 
   .detail-sheet .detail-head {

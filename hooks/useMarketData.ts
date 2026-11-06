@@ -27,10 +27,15 @@ function quotesEqual(a: Quote, b: Quote): boolean {
     a.pct === b.pct &&
     a.change === b.change &&
     a.amount === b.amount &&
+    a.volume === b.volume &&
     a.amplitude === b.amplitude &&
     a.turnover === b.turnover &&
     a.volumeRatio === b.volumeRatio &&
     a.pe === b.pe &&
+    a.peTtm === b.peTtm &&
+    a.pb === b.pb &&
+    a.marketCap === b.marketCap &&
+    a.netInflow === b.netInflow &&
     a.high === b.high &&
     a.low === b.low &&
     a.open === b.open &&

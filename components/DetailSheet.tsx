@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef } from "react";
-import { formatDelta, formatIndexDelta, formatIndexPrice, formatPe, formatPercent, formatPrice, toneOf } from "@/lib/market";
+import {
+  formatAmount,
+  formatDelta,
+  formatIndexDelta,
+  formatIndexPrice,
+  formatPe,
+  formatPercent,
+  formatPrice,
+  formatSignedAmount,
+  formatVolume,
+  toneOf,
+} from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
 import { DailyKChart } from "./DailyKChart";
 import { DetailChart } from "./DetailChart";
@@ -119,9 +130,6 @@ export function DetailSheet({
                   {isIndex ? formatIndexDelta(quote.change) : formatDelta(quote.change, code)}
                 </span>
               ) : null}
-              {quote?.pe != null ? (
-                <span className="detail-pe">PE {formatPe(quote.pe)}</span>
-              ) : null}
             </span>
           </div>
           <button
@@ -180,6 +188,37 @@ export function DetailSheet({
               <DailyKChart secid={instrument.secid} name={name} code={code} kind={kind} />
             </section>
           </div>
+
+          {!isIndex ? (
+            <div className="detail-stats">
+              <div className="stat">
+                <span className="stat-label">PE</span>
+                <span className="stat-value">{formatPe(quote?.pe)}</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">PE TTM</span>
+                <span className="stat-value">{formatPe(quote?.peTtm)}</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">PB</span>
+                <span className="stat-value">{formatPe(quote?.pb)}</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">总市值</span>
+                <span className="stat-value">{formatAmount(quote?.marketCap)}</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">成交量</span>
+                <span className="stat-value">{formatVolume(quote?.volume)}</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">主力净流入</span>
+                <span className={`stat-value tone-text tone-${toneOf(quote?.netInflow)}`}>
+                  {formatSignedAmount(quote?.netInflow)}
+                </span>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

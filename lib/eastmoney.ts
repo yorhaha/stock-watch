@@ -25,6 +25,7 @@ const QUOTE_FIELDS = [
   "f2",
   "f3",
   "f4",
+  "f5",
   "f6",
   "f7",
   "f8",
@@ -37,6 +38,10 @@ const QUOTE_FIELDS = [
   "f16",
   "f17",
   "f18",
+  "f20",
+  "f23",
+  "f62",
+  "f114",
 ].join(",");
 
 type Primitive = string | number | null | undefined;
@@ -62,6 +67,9 @@ function quoteFromRaw(raw: RawRecord): Quote | null {
   const traded = rawPrice != null && rawPrice > 0;
   const price = traded ? rawPrice : preClose != null && preClose > 0 ? preClose : null;
   const pe = numeric(raw.f9);
+  const peTtm = numeric(raw.f114);
+  const pb = numeric(raw.f23);
+  const marketCap = numeric(raw.f20);
   return {
     secid: `${market}.${code}`,
     code,
@@ -70,11 +78,16 @@ function quoteFromRaw(raw: RawRecord): Quote | null {
     pct: traded ? numeric(raw.f3) : null,
     change: traded ? numeric(raw.f4) : null,
     amount: numeric(raw.f6),
+    volume: numeric(raw.f5),
     amplitude: traded ? numeric(raw.f7) : null,
     turnover: traded ? numeric(raw.f8) : null,
     volumeRatio: traded ? numeric(raw.f10) : null,
-    // Indices and funds report 0 for PE; only stocks carry a real ratio.
+    // Indices and funds report 0 for valuation ratios; only stocks carry real values.
     pe: pe != null && pe !== 0 ? pe : null,
+    peTtm: peTtm != null && peTtm !== 0 ? peTtm : null,
+    pb: pb != null && pb !== 0 ? pb : null,
+    marketCap: marketCap != null && marketCap > 0 ? marketCap : null,
+    netInflow: numeric(raw.f62),
     high: traded ? numeric(raw.f15) : null,
     low: traded ? numeric(raw.f16) : null,
     open: traded ? numeric(raw.f17) : null,

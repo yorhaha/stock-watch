@@ -13,10 +13,15 @@ export interface Quote {
   pct: number | null;
   change: number | null;
   amount: number | null;
+  volume: number | null;
   amplitude: number | null;
   turnover: number | null;
   volumeRatio: number | null;
   pe: number | null;
+  peTtm: number | null;
+  pb: number | null;
+  marketCap: number | null;
+  netInflow: number | null;
   high: number | null;
   low: number | null;
   open: number | null;
