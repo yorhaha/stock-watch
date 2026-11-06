@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIndices } from "@/hooks/useIndices";
 import { useMarketData } from "@/hooks/useMarketData";
 import { useMarketSession } from "@/hooks/useMarketSession";
@@ -18,14 +18,7 @@ import {
 } from "@/lib/market";
 import type { StockRef } from "@/lib/types";
 import { AddStockDialog } from "./AddStockDialog";
-import {
-  AlertIcon,
-  CheckIcon,
-  PencilIcon,
-  PlusIcon,
-  RefreshIcon,
-  SettingsIcon,
-} from "./Icons";
+import { AlertIcon, PlusIcon, RefreshIcon, SettingsIcon } from "./Icons";
 import { IndexManagerDialog } from "./IndexManagerDialog";
 import { IndexStrip } from "./IndexStrip";
 import { MarketClock } from "./MarketClock";
@@ -50,7 +43,6 @@ export function WatchlistApp() {
     addMany,
     insert,
     remove,
-    move,
     toggleHeld,
   } = useWatchlist();
   const {
@@ -66,7 +58,6 @@ export function WatchlistApp() {
     setTheme,
     setRefreshMs,
     setShowPrice,
-    setSort,
     setShowIndexValue,
     setPinHeld,
   } = usePreferences();
@@ -106,16 +97,14 @@ export function WatchlistApp() {
     session,
     ready,
   );
-  const [editing, setEditing] = useState(false);
   const displayStocks = useMemo(() => {
-    const ordered = sortStocksByChange(stocks, quotes, preferences.sort);
-    // Editing needs raw manual order so drag-and-drop maps to stored indices.
-    if (!preferences.pinHeld || editing) return ordered;
+    const ordered = sortStocksByChange(stocks, quotes);
+    if (!preferences.pinHeld) return ordered;
     return [
       ...ordered.filter((stock) => stock.held === true),
       ...ordered.filter((stock) => stock.held !== true),
     ];
-  }, [stocks, quotes, preferences.sort, preferences.pinHeld, editing]);
+  }, [stocks, quotes, preferences.pinHeld]);
   const displayStocksRef = useRef(displayStocks);
   displayStocksRef.current = displayStocks;
 
@@ -126,8 +115,6 @@ export function WatchlistApp() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [indexManagerOpen, setIndexManagerOpen] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   const toastId = useRef(0);
 
@@ -295,20 +282,13 @@ export function WatchlistApp() {
     [stocks, addMany, showToast],
   );
 
-  const handleEditing = useCallback(() => {
-    if (!editing) setSort("manual");
-    setEditing(!editing);
-    setDragIndex(null);
-    setDragOver(null);
-  }, [editing, setSort]);
-
   const openIndexManager = useCallback(() => {
     setSettingsOpen(false);
     setIndexManagerOpen(true);
   }, []);
 
   const sortIndicesByChange = useCallback(() => {
-    replaceIndices(sortStocksByChange(indices, quotes, "change-desc"));
+    replaceIndices(sortStocksByChange(indices, quotes));
   }, [indices, quotes, replaceIndices]);
 
   const focusRelative = useCallback((direction: 1 | -1) => {
@@ -348,7 +328,6 @@ export function WatchlistApp() {
         setDialogOpen(true);
         return;
       }
-      if (editing) return;
 
       const interactive = target?.closest(
         'button, a, input, textarea, select, [contenteditable="true"], [role="button"]',
@@ -367,33 +346,9 @@ export function WatchlistApp() {
     dialogOpen,
     settingsOpen,
     indexManagerOpen,
-    editing,
     detailTarget,
     focusRelative,
   ]);
-
-  const onDragStart = useCallback((index: number) => {
-    setDragIndex(index);
-  }, []);
-
-  const onDragOverRow = useCallback((event: DragEvent<HTMLDivElement>, index: number) => {
-    event.preventDefault();
-    if (dragOver !== index) setDragOver(index);
-  }, [dragOver]);
-
-  const onDragEnd = useCallback(() => {
-    setDragIndex(null);
-    setDragOver(null);
-  }, []);
-
-  const onDrop = useCallback(
-    (index: number) => {
-      if (dragIndex != null && dragIndex !== index) move(dragIndex, index);
-      setDragIndex(null);
-      setDragOver(null);
-    },
-    [dragIndex, move],
-  );
 
   return (
     <div
@@ -405,7 +360,6 @@ export function WatchlistApp() {
       data-index-count={indices.length}
       data-show-price={preferences.showPrice ? "true" : "false"}
       data-show-index-value={preferences.showIndexValue ? "true" : "false"}
-      data-sort={preferences.sort}
       data-detail-open={detailInstrument ? "true" : "false"}
     >
       <a className="skip-link" href="#watchlist">
@@ -454,12 +408,10 @@ export function WatchlistApp() {
                   open={settingsOpen}
                   preferences={preferences}
                   indexCount={indices.length}
-                  sortLocked={editing}
                   onClose={closeSettings}
                   onTheme={setTheme}
                   onRefresh={setRefreshMs}
                   onShowPrice={setShowPrice}
-                  onSort={setSort}
                   onPinHeld={setPinHeld}
                   onShowIndexValue={setShowIndexValue}
                   onManageIndices={openIndexManager}
@@ -511,17 +463,6 @@ export function WatchlistApp() {
                 <RefreshIcon size={12} />
               )}
             </button>
-            <div className="toolbar-actions">
-              <button
-                type="button"
-                className={`icon-button ${editing ? "is-active" : ""}`}
-                onClick={handleEditing}
-                aria-label={editing ? "完成编辑" : "编辑自选"}
-                title={editing ? "完成编辑" : "编辑自选"}
-              >
-                {editing ? <CheckIcon size={15} /> : <PencilIcon size={15} />}
-              </button>
-            </div>
           </div>
 
           {!stocksHydrated ? (
@@ -543,12 +484,8 @@ export function WatchlistApp() {
               </button>
             </div>
           ) : (
-            <div
-              className={`watchlist ${editing ? "is-editing" : ""}`}
-              role="list"
-              data-editing={editing}
-            >
-              {displayStocks.map((stock, index) => {
+            <div className="watchlist" role="list">
+              {displayStocks.map((stock) => {
                 const quote = quotes[stock.secid];
                 const trend = trends[stock.secid];
                 return (
@@ -557,21 +494,10 @@ export function WatchlistApp() {
                     stock={stock}
                     quote={quote}
                     trend={trend}
-                    index={index}
                     active={focusedSecid === stock.secid}
-                    editing={editing}
                     held={stock.held === true}
-                    first={index === 0}
-                    last={index === displayStocks.length - 1}
-                    dragOver={dragOver === index && dragIndex !== index}
                     onActivate={activate}
                     onOpen={openDetail}
-                    onRemove={handleRemove}
-                    onMove={move}
-                    onDragStart={onDragStart}
-                    onDragOver={onDragOverRow}
-                    onDragEnd={onDragEnd}
-                    onDrop={onDrop}
                   />
                 );
               })}
@@ -592,6 +518,7 @@ export function WatchlistApp() {
           trend={trends[detailInstrument.secid]}
           held={detailTarget.kind === "stock" ? detailInstrument.held === true : undefined}
           onToggleHeld={detailTarget.kind === "stock" ? toggleHeld : undefined}
+          onRemove={detailTarget.kind === "stock" ? handleRemove : undefined}
           onClose={closeDetail}
         />
       ) : null}

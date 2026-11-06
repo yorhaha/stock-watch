@@ -1,4 +1,4 @@
-import type { MarketKind, Quote, SessionInfo, SortMode, StockRef, Trend } from "./types";
+import type { MarketKind, Quote, SessionInfo, StockRef, Trend } from "./types";
 
 export const MARKET_TIME_ZONE = "Asia/Shanghai";
 
@@ -120,7 +120,6 @@ export const DEFAULT_PREFERENCES = {
   theme: "auto" as const,
   refreshMs: 5000,
   showPrice: true,
-  sort: "manual" as const,
   showIndexValue: true,
   pinHeld: false,
 };
@@ -573,10 +572,7 @@ export function isSupportedIndex(secid: string, code: string): boolean {
 export function sortStocksByChange(
   stocks: StockRef[],
   quotes: Record<string, Quote>,
-  mode: SortMode,
 ): StockRef[] {
-  if (mode === "manual") return stocks;
-  const direction = mode === "change-desc" ? -1 : 1;
   return stocks
     .map((stock, order) => ({ stock, order, pct: quotes[stock.secid]?.pct }))
     .sort((a, b) => {
@@ -586,7 +582,7 @@ export function sortStocksByChange(
       if (aValue == null) return 1;
       if (bValue == null) return -1;
       if (aValue === bValue) return a.order - b.order;
-      return (aValue - bValue) * direction;
+      return bValue - aValue;
     })
     .map((entry) => entry.stock);
 }

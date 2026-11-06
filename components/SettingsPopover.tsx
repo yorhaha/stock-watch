@@ -1,18 +1,16 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { Preferences, SortMode, ThemeMode } from "@/lib/types";
+import type { Preferences, ThemeMode } from "@/lib/types";
 import { ChevronRightIcon } from "./Icons";
 
 interface SettingsPopoverProps {
   open: boolean;
   preferences: Preferences;
-  sortLocked?: boolean;
   onClose: () => void;
   onTheme: (theme: ThemeMode) => void;
   onRefresh: (refreshMs: number) => void;
   onShowPrice: (showPrice: boolean) => void;
-  onSort: (sort: SortMode) => void;
   onPinHeld: (pin: boolean) => void;
   onShowIndexValue: (show: boolean) => void;
   onManageIndices: () => void;
@@ -27,21 +25,13 @@ const themeOptions: { value: ThemeMode; label: string }[] = [
 
 const refreshOptions = [3000, 5000, 10000];
 
-const sortOptions: { value: SortMode; label: string; hint: string }[] = [
-  { value: "manual", label: "自选", hint: "按自选顺序" },
-  { value: "change-desc", label: "涨跌幅 ↓", hint: "按涨跌幅从高到低" },
-  { value: "change-asc", label: "涨跌幅 ↑", hint: "按涨跌幅从低到高" },
-];
-
 export function SettingsPopover({
   open,
   preferences,
-  sortLocked = false,
   onClose,
   onTheme,
   onRefresh,
   onShowPrice,
-  onSort,
   onPinHeld,
   onShowIndexValue,
   onManageIndices,
@@ -154,32 +144,12 @@ export function SettingsPopover({
       </div>
 
       <div className="settings-row">
-        <span className="settings-label">排序</span>
-        <div className="segmented" role="group" aria-label="自选排序">
-          {sortOptions.map((option) => (
-            <button
-              type="button"
-              key={option.value}
-              className={preferences.sort === option.value ? "is-selected" : ""}
-              aria-label={option.hint}
-              aria-pressed={preferences.sort === option.value}
-              disabled={sortLocked}
-              onClick={() => onSort(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="settings-row">
         <span className="settings-label">持有</span>
         <div className="segmented" role="group" aria-label="持有置顶">
           <button
             type="button"
             className={preferences.pinHeld ? "is-selected" : ""}
             aria-pressed={preferences.pinHeld}
-            disabled={sortLocked}
             onClick={() => onPinHeld(true)}
           >
             置顶
@@ -188,7 +158,6 @@ export function SettingsPopover({
             type="button"
             className={!preferences.pinHeld ? "is-selected" : ""}
             aria-pressed={!preferences.pinHeld}
-            disabled={sortLocked}
             onClick={() => onPinHeld(false)}
           >
             不置顶

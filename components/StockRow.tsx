@@ -1,30 +1,18 @@
 "use client";
 
-import { memo, type DragEvent } from "react";
+import { memo } from "react";
 import { formatDelta, formatPercent, formatPrice, toneOf } from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
-import { ChevronDownIcon, ChevronUpIcon, GripIcon, TrashIcon } from "./Icons";
 import { Sparkline } from "./Sparkline";
 
 interface StockRowProps {
   stock: StockRef;
   quote?: Quote;
   trend?: Trend;
-  index: number;
   active: boolean;
-  editing: boolean;
   held: boolean;
-  first: boolean;
-  last: boolean;
-  dragOver: boolean;
   onActivate: (stock: StockRef) => void;
   onOpen: (stock: StockRef) => void;
-  onRemove: (stock: StockRef) => void;
-  onMove: (from: number, to: number) => void;
-  onDragStart: (index: number) => void;
-  onDragOver: (event: DragEvent<HTMLDivElement>, index: number) => void;
-  onDragEnd: () => void;
-  onDrop: (index: number) => void;
 }
 
 function Percent({ value }: { value: number | null | undefined }) {
@@ -35,78 +23,13 @@ export const StockRow = memo(function StockRow({
   stock,
   quote,
   trend,
-  index,
   active,
-  editing,
   held,
-  first,
-  last,
-  dragOver,
   onActivate,
   onOpen,
-  onRemove,
-  onMove,
-  onDragStart,
-  onDragOver,
-  onDragEnd,
-  onDrop,
 }: StockRowProps) {
   const name = quote?.name || stock.name;
   const tone = toneOf(quote?.pct);
-
-  if (editing) {
-    return (
-      <div
-        className={`stock-row edit-row ${held ? "is-held" : ""} ${dragOver ? "is-drag-over" : ""}`}
-        draggable
-        onDragStart={() => onDragStart(index)}
-        onDragOver={(event) => onDragOver(event, index)}
-        onDragEnd={onDragEnd}
-        onDrop={(event) => {
-          event.preventDefault();
-          onDrop(index);
-        }}
-        id={`stock-${stock.secid}`}
-        data-secid={stock.secid}
-        role="listitem"
-      >
-        <span className="drag-handle" aria-hidden="true">
-          <GripIcon size={15} />
-        </span>
-        <div className="stock-identity">
-          <span className="stock-name" title={name}>{name}</span>
-        </div>
-        <div className="edit-actions">
-          <button
-            type="button"
-            className="icon-button compact"
-            onClick={() => onMove(index, index - 1)}
-            disabled={first}
-            aria-label={`上移 ${name}`}
-          >
-            <ChevronUpIcon size={14} />
-          </button>
-          <button
-            type="button"
-            className="icon-button compact"
-            onClick={() => onMove(index, index + 1)}
-            disabled={last}
-            aria-label={`下移 ${name}`}
-          >
-            <ChevronDownIcon size={14} />
-          </button>
-          <button
-            type="button"
-            className="icon-button compact edit-remove"
-            onClick={() => onRemove(stock)}
-            aria-label={`从自选移除 ${name}`}
-          >
-            <TrashIcon size={13} />
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div

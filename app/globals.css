@@ -561,12 +561,6 @@ a {
   background: var(--warn);
 }
 
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .economic-calendar {
   padding-top: 12px;
   margin-top: 22px;
@@ -707,8 +701,9 @@ a {
 }
 
 .watchlist {
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
 }
 
 .stock-row {
@@ -1089,6 +1084,23 @@ a {
   fill: currentColor;
 }
 
+.detail-sheet-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.detail-sheet-remove {
+  color: var(--text-3);
+}
+
+.detail-sheet-remove:hover {
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  color: var(--red);
+}
+
 .detail-sheet-quote {
   display: flex;
   min-width: 0;
@@ -1422,52 +1434,6 @@ a {
 
 .chart-retry:hover {
   color: var(--text);
-}
-
-.edit-row {
-  display: flex;
-  height: 46px;
-  align-items: center;
-  gap: 12px;
-  padding: 0 12px;
-  cursor: grab;
-}
-
-.edit-row:active {
-  cursor: grabbing;
-}
-
-.edit-row.is-drag-over {
-  background: var(--active);
-  box-shadow: inset 0 2px 0 var(--text);
-}
-
-.drag-handle {
-  display: flex;
-  width: 24px;
-  height: 28px;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-3);
-}
-
-.edit-row .stock-identity {
-  flex-direction: row;
-  align-items: baseline;
-  gap: 9px;
-}
-
-.edit-actions {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  margin-left: auto;
-}
-
-.edit-remove:hover {
-  background: color-mix(in srgb, var(--red) 8%, transparent);
-  color: var(--red);
 }
 
 .empty-state {
@@ -2204,30 +2170,23 @@ a {
   background: color-mix(in srgb, currentColor 11%, transparent);
 }
 
-.watchlist:not(.is-editing) {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 10px;
-  border: 0;
-}
-
-.watchlist:not(.is-editing) .stock-row {
+.watchlist .stock-row {
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
 }
 
-.watchlist:not(.is-editing) .stock-row:last-child {
+.watchlist .stock-row:last-child {
   border-bottom: 1px solid var(--line);
 }
 
-.watchlist:not(.is-editing) .stock-row.is-held {
+.watchlist .stock-row.is-held {
   background-color: var(--surface);
   background-image: linear-gradient(var(--hold-bg), var(--hold-bg));
 }
 
-.watchlist:not(.is-editing) .stock-main {
+.watchlist .stock-main {
   height: 64px;
   grid-template-columns: 112px minmax(0, 1fr);
   grid-template-areas:
@@ -2239,7 +2198,7 @@ a {
   padding: 8px 10px;
 }
 
-.watchlist:not(.is-editing) .stock-identity {
+.watchlist .stock-identity {
   grid-area: identity;
   align-self: center;
   flex-direction: row;
@@ -2247,7 +2206,7 @@ a {
   gap: 0;
 }
 
-.watchlist:not(.is-editing) .stock-quote {
+.watchlist .stock-quote {
   grid-area: quote;
   align-self: center;
   flex-direction: column;
@@ -2255,21 +2214,21 @@ a {
   gap: 2px;
 }
 
-.watchlist:not(.is-editing) .stock-price {
+.watchlist .stock-price {
   font-size: 13px;
 }
 
-.watchlist:not(.is-editing) .stock-change {
+.watchlist .stock-change {
   justify-content: flex-start;
   font-size: 9px;
   gap: 4px;
 }
 
-.watchlist:not(.is-editing) .change-delta {
+.watchlist .change-delta {
   display: none;
 }
 
-.watchlist:not(.is-editing) .stock-spark {
+.watchlist .stock-spark {
   grid-area: spark;
   align-self: stretch;
   min-height: 0;
@@ -2277,7 +2236,7 @@ a {
   padding: 2px 0;
 }
 
-.watchlist:not(.is-editing) .sparkline {
+.watchlist .sparkline {
   height: 100%;
 }
 
@@ -2514,10 +2473,6 @@ a {
     font-size: 9px;
   }
 
-  .edit-row {
-    height: 44px;
-  }
-
   .detail-sheet {
     width: min(680px, calc(100vw - 32px));
   }
@@ -2707,11 +2662,6 @@ a {
     height: 10px;
   }
 
-  .toolbar-actions .icon-button {
-    width: 28px;
-    height: 28px;
-  }
-
   .stock-main {
     height: 39px;
     grid-template-columns: 88px minmax(0, 1fr) 68px;
@@ -2756,46 +2706,31 @@ a {
     padding: 0 8px;
   }
 
-  .edit-row {
-    height: 38px;
-    gap: 8px;
-    padding: 0 8px;
-  }
-
-  .drag-handle {
-    width: 18px;
-    height: 24px;
-  }
-
-  .edit-actions {
-    gap: 1px;
-  }
-
   .icon-button.compact {
     width: 24px;
     height: 24px;
   }
 
-  .watchlist:not(.is-editing) {
+  .watchlist {
     gap: 6px;
   }
 
-  .watchlist:not(.is-editing) .stock-main {
+  .watchlist .stock-main {
     height: 60px;
     grid-template-columns: 78px minmax(0, 1fr);
     gap: 2px 8px;
     padding: 7px 8px 6px;
   }
 
-  .watchlist:not(.is-editing) .stock-name {
+  .watchlist .stock-name {
     font-size: 12px;
   }
 
-  .watchlist:not(.is-editing) .stock-price {
+  .watchlist .stock-price {
     font-size: 12px;
   }
 
-  .watchlist:not(.is-editing) .stock-change {
+  .watchlist .stock-change {
     font-size: 8.5px;
     gap: 3px;
   }
@@ -2948,7 +2883,7 @@ a {
     height: 18px;
   }
 
-  .watchlist:not(.is-editing) .stock-main {
+  .watchlist .stock-main {
     height: 48px;
     grid-template-columns: 74px minmax(0, 1fr);
     gap: 1px 6px;
@@ -2970,7 +2905,7 @@ a {
     height: 27px;
   }
 
-  .watchlist:not(.is-editing) .stock-main {
+  .watchlist .stock-main {
     height: 46px;
     gap: 0 6px;
     padding: 3px 6px;
@@ -3023,20 +2958,20 @@ a {
     padding-left: 10px;
   }
 
-  .watchlist:not(.is-editing) .stock-main {
+  .watchlist .stock-main {
     grid-template-columns: 72px minmax(0, 1fr);
     padding: 4px 6px;
   }
 
-  .watchlist:not(.is-editing) .stock-name {
+  .watchlist .stock-name {
     font-size: 11.5px;
   }
 
-  .watchlist:not(.is-editing) .stock-price {
+  .watchlist .stock-price {
     font-size: 11.5px;
   }
 
-  .watchlist:not(.is-editing) .stock-change {
+  .watchlist .stock-change {
     font-size: 8px;
   }
 

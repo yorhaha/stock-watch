@@ -48,15 +48,6 @@ export function SettingsIcon(props: IconProps) {
   );
 }
 
-export function PencilIcon(props: IconProps) {
-  return (
-    <IconBase {...props}>
-      <path d="M13.4 5.6 18.4 10.6M4.8 19.2l1-4.6L16.6 3.8a1.6 1.6 0 0 1 2.2 0l1.4 1.4a1.6 1.6 0 0 1 0 2.2L9.4 18.2l-4.6 1Z" />
-      <path d="M13.9 6.1 17.9 10.1" />
-    </IconBase>
-  );
-}
-
 export function CloseIcon(props: IconProps) {
   return (
     <IconBase {...props}>
@@ -93,19 +84,6 @@ export function TrashIcon(props: IconProps) {
   return (
     <IconBase {...props}>
       <path d="M4.5 7h15M9.5 7V4.8h5V7M7 7l.7 12.2h8.6L17 7M10.2 10.5v5.2M13.8 10.5v5.2" />
-    </IconBase>
-  );
-}
-
-export function GripIcon(props: IconProps) {
-  return (
-    <IconBase {...props}>
-      <circle cx="9" cy="7" r="0.9" fill="currentColor" stroke="none" />
-      <circle cx="15" cy="7" r="0.9" fill="currentColor" stroke="none" />
-      <circle cx="9" cy="12" r="0.9" fill="currentColor" stroke="none" />
-      <circle cx="15" cy="12" r="0.9" fill="currentColor" stroke="none" />
-      <circle cx="9" cy="17" r="0.9" fill="currentColor" stroke="none" />
-      <circle cx="15" cy="17" r="0.9" fill="currentColor" stroke="none" />
     </IconBase>
   );
 }

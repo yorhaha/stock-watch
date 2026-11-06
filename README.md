@@ -31,15 +31,15 @@
 - **独立分时详情**：价格线、均价线、成交量、今开 / 最高 / 最低 / 昨收 / 成交额 / 换手 / 量比 / 振幅，以及逐分钟悬停详情。
 - **实时刷新**：盘中行情每 3–10 秒刷新（可设置），分时图约每 30 秒同步；页面隐藏时暂停请求，回到前台立即补刷。
 - **沪深京 A 股与 ETF 搜索**：支持名称、拼音与 6 位代码，ETF 价格保留 3 位小数；最多可放 30 个标的。
-- **涨跌幅排序**：设置中可在自选顺序、涨跌幅从高到低、从低到高之间切换；排序不改变手动顺序。
+- **涨跌幅排序**：自选始终按当日涨跌幅从高到低排列。
 - **批量导入**：粘贴多行文本，每行一个股票或 ETF 名称；自动识别、去重，并标记已在自选、未找到、多个匹配与超出上限的条目。
-- **自选管理**：拖动排序，或使用上下箭头调整；移除后可在 Toast 中撤销。
+- **自选管理**：在个股详情页移除标的；移除后可在 Toast 中撤销。
 - **明暗主题**：自动跟随系统，也可手动固定浅色 / 深色。
 - **显示自定义**：隐藏价格、隐藏指数数值，全部即时生效并保存；涨跌幅始终以红绿色块呈现。
 - **键盘操作**：`⌘K` / `/` 添加，`↑` `↓` 浏览，`↵` 打开详情，`Esc` 关闭。
 - **移动优先**：导航与市场时钟合并为单行；手机端以 60px 卡片高度呈现双列行情，短屏设备进一步压缩高度，优先保证列表密度。
 - **没有多余说明文字**：主界面只保留数据、标题与操作图标；只有输入与识别结果需要辨认时才出现功能标签。
-- **Agent 可读**：行情行与指数暴露 `data-secid`、`data-code`、`data-price`、`data-pct`、`data-status`、`data-market-phase`、`data-show-price`、`data-show-index-value`、`data-sort`、`data-index-count` 等稳定属性，财经日历暴露 `data-event`、`data-event-date`、`data-event-time`，便于自动化检查与 AI Agent 读取。
+- **Agent 可读**：行情行与指数暴露 `data-secid`、`data-code`、`data-price`、`data-pct`、`data-status`、`data-market-phase`、`data-show-price`、`data-show-index-value`、`data-index-count` 等稳定属性，财经日历暴露 `data-event`、`data-event-date`、`data-event-time`，便于自动化检查与 AI Agent 读取。
 - **纯静态**：Next.js 静态导出，无服务端、无数据库，直接部署 GitHub Pages。
 
 ## 预览
@@ -101,9 +101,9 @@ app/
   layout.tsx          # 元信息、主题预置、字体与全局样式入口
   page.tsx            # 静态首页
 components/
-  WatchlistApp.tsx    # 页面编排、键盘交互、Toast、编辑模式
+  WatchlistApp.tsx    # 页面编排、键盘交互与 Toast
   StockRow.tsx        # 行情卡片
-  DetailSheet.tsx     # 股票 / 指数详情层
+  DetailSheet.tsx     # 股票 / 指数详情层与自选移除
   Sparkline.tsx       # 列表用分时缩略线
   DetailChart.tsx     # 分时主图、成交量、悬停十字线
   AddStockDialog.tsx  # ⌘K 搜索添加 / 批量导入
@@ -117,18 +117,18 @@ hooks/
   useMarketData.ts    # 批量行情、分时、轮询与页面可见性
   useWatchlist.ts     # 自选持久化
   useIndices.ts       # 自定义指数持久化
-  usePreferences.ts   # 主题、显示与排序偏好
+  usePreferences.ts   # 主题与显示偏好
   useEconomicEvents.ts # 财经日历每日缓存
 lib/
   eastmoney.ts        # 行情 / 分时 / 搜索数据源
   events.ts           # 财经日历获取、解析与北京时间格式化
   chart.ts            # 纯函数图表几何计算
-  market.ts           # 交易时段、格式化、默认自选、ETF 校验与排序
+  market.ts           # 交易时段、格式化、默认自选、ETF 校验与涨跌幅排序
 ```
 
 设计上刻意没有引入 UI 组件库或图表库：图表路径、布局、动效与交互都由少量纯函数和 CSS 实现。这样页面没有运行时框架负担，视觉也能保持统一。
 
-主界面不靠文案解释行为：添加是右上角唯一的实心按钮，铅笔进入编辑，点击任意标的打开分时详情，图表本身就是分时结构；批量导入只在输入与识别结果需要辨认时显示必要标签。
+主界面不靠文案解释行为：添加是右上角唯一的实心按钮，点击任意标的打开分时详情，图表本身就是分时结构；批量导入只在输入与识别结果需要辨认时显示必要标签。
 
 ## 数据说明
 

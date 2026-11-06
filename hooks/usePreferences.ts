@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_PREFERENCES, STORAGE_KEYS } from "@/lib/market";
-import type { Preferences, SortMode, ThemeMode } from "@/lib/types";
+import type { Preferences, ThemeMode } from "@/lib/types";
 
 function readPreferences(): Preferences {
   try {
@@ -18,10 +18,6 @@ function readPreferences(): Preferences {
         ? Number(parsed.refreshMs)
         : DEFAULT_PREFERENCES.refreshMs,
       showPrice: parsed.showPrice !== false,
-      sort:
-        parsed.sort === "change-desc" || parsed.sort === "change-asc"
-          ? parsed.sort
-          : "manual",
       showIndexValue: parsed.showIndexValue !== false,
       pinHeld: parsed.pinHeld === true,
     };
@@ -82,10 +78,6 @@ export function usePreferences() {
     setPreferences((current) => ({ ...current, showPrice }));
   }, []);
 
-  const setSort = useCallback((sort: SortMode) => {
-    setPreferences((current) => ({ ...current, sort }));
-  }, []);
-
   const setShowIndexValue = useCallback((showIndexValue: boolean) => {
     setPreferences((current) => ({ ...current, showIndexValue }));
   }, []);
@@ -99,7 +91,6 @@ export function usePreferences() {
     setTheme,
     setRefreshMs,
     setShowPrice,
-    setSort,
     setShowIndexValue,
     setPinHeld,
   };

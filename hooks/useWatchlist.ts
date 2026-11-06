@@ -94,23 +94,5 @@ export function useWatchlist() {
     );
   }, []);
 
-  const move = useCallback((from: number, to: number) => {
-    setStocks((current) => {
-      if (
-        from === to ||
-        from < 0 ||
-        to < 0 ||
-        from >= current.length ||
-        to >= current.length
-      ) {
-        return current;
-      }
-      const next = [...current];
-      const [item] = next.splice(from, 1);
-      next.splice(to, 0, item);
-      return next;
-    });
-  }, []);
-
-  return { stocks, hydrated, add, addMany, insert, remove, move, toggleHeld };
+  return { stocks, hydrated, add, addMany, insert, remove, toggleHeld };
 }

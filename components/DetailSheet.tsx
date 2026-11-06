@@ -18,7 +18,7 @@ import {
 import type { Quote, StockRef, Trend } from "@/lib/types";
 import { DailyKChart } from "./DailyKChart";
 import { DetailChart } from "./DetailChart";
-import { BookmarkIcon, CloseIcon } from "./Icons";
+import { BookmarkIcon, CloseIcon, TrashIcon } from "./Icons";
 
 interface DetailSheetProps {
   instrument: StockRef;
@@ -27,6 +27,7 @@ interface DetailSheetProps {
   trend?: Trend;
   held?: boolean;
   onToggleHeld?: (secid: string) => void;
+  onRemove?: (stock: StockRef) => void;
   onClose: () => void;
 }
 
@@ -37,6 +38,7 @@ export function DetailSheet({
   trend,
   held = false,
   onToggleHeld,
+  onRemove,
   onClose,
 }: DetailSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -207,6 +209,20 @@ export function DetailSheet({
                   {formatSignedAmount(quote?.netInflow)}
                 </span>
               </div>
+            </div>
+          ) : null}
+
+          {onRemove ? (
+            <div className="detail-sheet-foot">
+              <button
+                type="button"
+                className="icon-button detail-sheet-remove"
+                onClick={() => onRemove(instrument)}
+                aria-label={`从自选移除 ${name}`}
+                title="从自选移除"
+              >
+                <TrashIcon size={14} />
+              </button>
             </div>
           ) : null}
         </div>

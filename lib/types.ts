@@ -90,13 +90,11 @@ export interface EconomicEvent {
 }
 
 export type ThemeMode = "auto" | "light" | "dark";
-export type SortMode = "manual" | "change-desc" | "change-asc";
 
 export interface Preferences {
   theme: ThemeMode;
   refreshMs: number;
   showPrice: boolean;
-  sort: SortMode;
   showIndexValue: boolean;
   pinHeld: boolean;
 }
