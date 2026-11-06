@@ -122,6 +122,7 @@ export const DEFAULT_PREFERENCES = {
   showPrice: true,
   sort: "manual" as const,
   showIndexValue: true,
+  pinHeld: false,
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {

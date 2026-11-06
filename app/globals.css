@@ -1178,19 +1178,6 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
-.stat-note {
-  display: block;
-  overflow: hidden;
-  margin-top: 2px;
-  color: var(--text-3);
-  font-size: 9px;
-  font-weight: 450;
-  letter-spacing: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
 .detail-sheet-close {
   margin-top: -3px;
   margin-left: 1px;
@@ -2880,10 +2867,6 @@ a {
 
   .stat-value {
     font-size: 10px;
-  }
-
-  .stat-note {
-    font-size: 8px;
   }
 
   .detail-sheet .detail-head {

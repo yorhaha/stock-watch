@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef } from "react";
 import { useDividendYield } from "@/hooks/useDividendYield";
+import { useVolumeEstimate } from "@/hooks/useVolumeEstimate";
 import {
   currentMarketClock,
   formatAmount,
@@ -65,14 +66,14 @@ export function DetailSheet({
     trend != null &&
     formatTradeDate(trend.tradeDate) === session.dateLabel &&
     (session.phase === "open" || session.phase === "lunch");
-  const estimatedVolume =
-    estimateLive &&
-    elapsedMinutes > 0 &&
-    elapsedMinutes < 240 &&
-    quote?.volume != null &&
-    quote.volume > 0
-      ? (quote.volume / elapsedMinutes) * 240
-      : null;
+  const estimatedVolume = useVolumeEstimate(
+    instrument.secid,
+    quote?.volume,
+    trend?.tradeDate,
+    !isIndex && estimateLive && elapsedMinutes > 0 && elapsedMinutes < 240
+      ? elapsedMinutes
+      : null,
+  );
   const hasAverage = useMemo(
     () => trend == null || trend.points.some((point) => point.average != null),
     [trend],
@@ -217,11 +218,8 @@ export function DetailSheet({
                 <span className="stat-value">{formatAmount(quote?.marketCap)}</span>
               </div>
               <div className="stat">
-                <span className="stat-label">成交量</span>
-                <span className="stat-value">{formatVolume(quote?.volume)}</span>
-                {estimatedVolume != null ? (
-                  <span className="stat-note">预估 {formatVolume(estimatedVolume)}</span>
-                ) : null}
+                <span className="stat-label">预估成交量</span>
+                <span className="stat-value">{formatVolume(estimatedVolume)}</span>
               </div>
               <div className="stat">
                 <span className="stat-label">量比</span>

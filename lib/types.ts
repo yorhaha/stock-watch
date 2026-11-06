@@ -47,6 +47,11 @@ export interface Trend {
   points: TrendPoint[];
 }
 
+export interface VolumeProfile {
+  tradeDate: string;
+  fractions: number[];
+}
+
 export interface Candle {
   date: string;
   open: number;
@@ -99,6 +104,7 @@ export interface Preferences {
   showPrice: boolean;
   sort: SortMode;
   showIndexValue: boolean;
+  pinHeld: boolean;
 }
 
 export interface SessionInfo {

@@ -13,6 +13,7 @@ interface SettingsPopoverProps {
   onRefresh: (refreshMs: number) => void;
   onShowPrice: (showPrice: boolean) => void;
   onSort: (sort: SortMode) => void;
+  onPinHeld: (pin: boolean) => void;
   onShowIndexValue: (show: boolean) => void;
   onManageIndices: () => void;
   indexCount: number;
@@ -41,6 +42,7 @@ export function SettingsPopover({
   onRefresh,
   onShowPrice,
   onSort,
+  onPinHeld,
   onShowIndexValue,
   onManageIndices,
   indexCount,
@@ -167,6 +169,30 @@ export function SettingsPopover({
               {option.label}
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="settings-row">
+        <span className="settings-label">持有</span>
+        <div className="segmented" role="group" aria-label="持有置顶">
+          <button
+            type="button"
+            className={preferences.pinHeld ? "is-selected" : ""}
+            aria-pressed={preferences.pinHeld}
+            disabled={sortLocked}
+            onClick={() => onPinHeld(true)}
+          >
+            置顶
+          </button>
+          <button
+            type="button"
+            className={!preferences.pinHeld ? "is-selected" : ""}
+            aria-pressed={!preferences.pinHeld}
+            disabled={sortLocked}
+            onClick={() => onPinHeld(false)}
+          >
+            不置顶
+          </button>
         </div>
       </div>
 

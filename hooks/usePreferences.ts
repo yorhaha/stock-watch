@@ -23,6 +23,7 @@ function readPreferences(): Preferences {
           ? parsed.sort
           : "manual",
       showIndexValue: parsed.showIndexValue !== false,
+      pinHeld: parsed.pinHeld === true,
     };
   } catch {
     return DEFAULT_PREFERENCES;
@@ -89,6 +90,10 @@ export function usePreferences() {
     setPreferences((current) => ({ ...current, showIndexValue }));
   }, []);
 
+  const setPinHeld = useCallback((pinHeld: boolean) => {
+    setPreferences((current) => ({ ...current, pinHeld }));
+  }, []);
+
   return {
     preferences,
     setTheme,
@@ -96,5 +101,6 @@ export function usePreferences() {
     setShowPrice,
     setSort,
     setShowIndexValue,
+    setPinHeld,
   };
 }

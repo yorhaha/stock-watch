@@ -68,6 +68,7 @@ export function WatchlistApp() {
     setShowPrice,
     setSort,
     setShowIndexValue,
+    setPinHeld,
   } = usePreferences();
   const session = useMarketSession();
 
@@ -105,10 +106,16 @@ export function WatchlistApp() {
     session,
     ready,
   );
-  const displayStocks = useMemo(
-    () => sortStocksByChange(stocks, quotes, preferences.sort),
-    [stocks, quotes, preferences.sort],
-  );
+  const [editing, setEditing] = useState(false);
+  const displayStocks = useMemo(() => {
+    const ordered = sortStocksByChange(stocks, quotes, preferences.sort);
+    // Editing needs raw manual order so drag-and-drop maps to stored indices.
+    if (!preferences.pinHeld || editing) return ordered;
+    return [
+      ...ordered.filter((stock) => stock.held === true),
+      ...ordered.filter((stock) => stock.held !== true),
+    ];
+  }, [stocks, quotes, preferences.sort, preferences.pinHeld, editing]);
   const displayStocksRef = useRef(displayStocks);
   displayStocksRef.current = displayStocks;
 
@@ -116,7 +123,6 @@ export function WatchlistApp() {
   const [detailTarget, setDetailTarget] = useState<
     { secid: string; kind: "stock" | "index" } | null
   >(null);
-  const [editing, setEditing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [indexManagerOpen, setIndexManagerOpen] = useState(false);
@@ -454,6 +460,7 @@ export function WatchlistApp() {
                   onRefresh={setRefreshMs}
                   onShowPrice={setShowPrice}
                   onSort={setSort}
+                  onPinHeld={setPinHeld}
                   onShowIndexValue={setShowIndexValue}
                   onManageIndices={openIndexManager}
                 />
