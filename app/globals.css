@@ -672,10 +672,6 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
-.breadth-stat.is-total {
-  margin-left: auto;
-}
-
 .breadth-bar {
   display: flex;
   height: 4px;
@@ -2687,10 +2683,6 @@ a {
 
   .breadth-ratio {
     font-size: 9px;
-  }
-
-  .breadth-stat.is-total {
-    margin-left: 0;
   }
 
   .breadth-bar {

@@ -580,10 +580,7 @@ export function WatchlistApp() {
         </section>
 
         <EconomicCalendar />
-        <MarketBreadth
-          active={session.isTrading || session.isAuction}
-          live={session.phase === "open"}
-        />
+        <MarketBreadth active={session.isTrading || session.isAuction} />
       </main>
 
       {detailTarget && detailInstrument ? (

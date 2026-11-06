@@ -47,11 +47,6 @@ export interface Trend {
   points: TrendPoint[];
 }
 
-export interface AmountProfile {
-  tradeDate: string;
-  fractions: number[];
-}
-
 export interface Candle {
   date: string;
   open: number;
@@ -76,7 +71,6 @@ export interface MarketBreadth {
   down: number;
   limitUp: number | null;
   limitDown: number | null;
-  amount: number | null;
   volumeRatio: number | null;
   tradeDate: string;
 }

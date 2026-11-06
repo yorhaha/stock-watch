@@ -9,7 +9,6 @@ import {
   tradingMinuteFromTime,
 } from "./market";
 import type {
-  AmountProfile,
   Candle,
   MarketBreadth,
   MarketKind,
@@ -32,7 +31,7 @@ const SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E326E8";
 const QUOTE_TOKEN = "fa5fd1943c7b386f172d6893dbfba10b";
 const QUOTE_MARKETS = new Set([0, 1, 100, 101, 103, 104, 112, 124]);
 const BREADTH_SECIDS = ["1.000001", "0.399001"];
-const BREADTH_FIELDS = ["f5", "f6", "f10", "f104", "f105", "f106", "f124"].join(",");
+const BREADTH_FIELDS = ["f5", "f10", "f104", "f105", "f106", "f124"].join(",");
 const POOL_ENDPOINT = "https://push2ex.eastmoney.com/getTopic";
 const POOL_TOKEN = "7eea3edcaed734bea9cbfc24409ed989";
 const DIVIDEND_ENDPOINT = "https://datacenter-web.eastmoney.com/api/data/v1/get";
@@ -532,78 +531,6 @@ export async function fetchDailyKline(
   return candles;
 }
 
-/**
- * Average share of a full day's turnover already traded by each minute,
- * combined across the two exchange indices. Built from the completed sessions
- * in a five-day intraday response; used to project the market's closing
- * turnover without assuming a flat intraday pace.
- */
-export async function fetchMarketAmountProfile(
-  signal?: AbortSignal,
-): Promise<AmountProfile | null> {
-  const results = await Promise.allSettled(
-    BREADTH_SECIDS.map(async (secid) => {
-      const params = new URLSearchParams({
-        secid,
-        fields1: "f1,f2,f3,f4,f5,f6,f7,f8",
-        fields2: "f51,f52,f53,f56,f57,f58",
-        iscr: "0",
-        ndays: "5",
-        ut: QUOTE_TOKEN,
-        _: String(Date.now()),
-      });
-      return (await fetchKlineJson(
-        `${TREND_HISTORY_ENDPOINT}?${params.toString()}`,
-        signal,
-      )) as TrendPayload;
-    }),
-  );
-  if (signal?.aborted) return null;
-
-  const sessions = new Map<string, Map<number, number>>();
-  let latest = "";
-  for (const result of results) {
-    if (result.status !== "fulfilled") continue;
-    for (const row of result.value.data?.trends ?? []) {
-      const parsed = parseTrendRow(row);
-      if (!parsed) continue;
-      const amount = numeric(parsed.amount);
-      if (amount == null) continue;
-      let points = sessions.get(parsed.date);
-      if (!points) sessions.set(parsed.date, (points = new Map()));
-      const minute = tradingMinuteFromTime(parsed.stamp);
-      points.set(minute, (points.get(minute) ?? 0) + amount);
-      if (parsed.date > latest) latest = parsed.date;
-    }
-  }
-
-  const sums = new Array<number>(241).fill(0);
-  let days = 0;
-  for (const [date, points] of sessions) {
-    // The latest day is still in progress; only completed sessions describe
-    // a full-day shape.
-    if (date === latest || points.size < 200) continue;
-    const entries = [...points.entries()].sort((a, b) => a[0] - b[0]);
-    const total = entries.reduce((sum, [, value]) => sum + value, 0);
-    if (total <= 0) continue;
-    let cumulative = 0;
-    let index = 0;
-    for (let minute = 0; minute <= 240; minute += 1) {
-      while (index < entries.length && entries[index][0] <= minute) {
-        cumulative += entries[index][1];
-        index += 1;
-      }
-      sums[minute] += cumulative / total;
-    }
-    days += 1;
-  }
-  if (days < 2) return null;
-  return {
-    tradeDate: latest,
-    fractions: sums.map((sum) => sum / days),
-  };
-}
-
 const breadthDateFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: MARKET_TIME_ZONE,
   year: "numeric",
@@ -626,7 +553,6 @@ function countOf(value: Primitive): number {
 
 interface BreadthRow {
   f5?: Primitive;
-  f6?: Primitive;
   f10?: Primitive;
   f104?: Primitive;
   f105?: Primitive;
@@ -638,7 +564,6 @@ interface BreadthBase {
   up: number;
   flat: number;
   down: number;
-  amount: number | null;
   volumeRatio: number | null;
   tradeDate: string;
 }
@@ -662,7 +587,6 @@ async function requestBreadth(
   let up = 0;
   let flat = 0;
   let down = 0;
-  let amount = 0;
   let volume = 0;
   let volumeBaseline = 0;
   let stamp = 0;
@@ -670,7 +594,6 @@ async function requestBreadth(
     up += countOf(row.f104);
     down += countOf(row.f105);
     flat += countOf(row.f106);
-    amount += countOf(row.f6);
     const rowVolume = countOf(row.f5);
     const rowRatio = numeric(row.f10);
     if (rowVolume > 0 && rowRatio != null && rowRatio > 0) {
@@ -686,7 +609,6 @@ async function requestBreadth(
     up,
     flat,
     down,
-    amount: amount > 0 ? amount : null,
     volumeRatio: volumeBaseline > 0 ? volume / volumeBaseline : null,
     tradeDate: beijingDate(stamp),
   };
