@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef } from "react";
+import { useDividendYield } from "@/hooks/useDividendYield";
 import {
   formatAmount,
   formatDelta,
@@ -11,6 +12,8 @@ import {
   formatPrice,
   formatSignedAmount,
   formatVolume,
+  formatYield,
+  isStockCode,
   toneOf,
 } from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
@@ -47,6 +50,11 @@ export function DetailSheet({
   const code = quote?.code || instrument.code;
   const tone = toneOf(quote?.pct);
   const isIndex = kind === "index";
+  const dividendYield = useDividendYield(
+    instrument.secid,
+    quote?.price,
+    !isIndex && isStockCode(code),
+  );
   const hasAverage = useMemo(
     () => trend == null || trend.points.some((point) => point.average != null),
     [trend],
@@ -202,6 +210,10 @@ export function DetailSheet({
               <div className="stat">
                 <span className="stat-label">PB</span>
                 <span className="stat-value">{formatPe(quote?.pb)}</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">股息率</span>
+                <span className="stat-value">{formatYield(dividendYield)}</span>
               </div>
               <div className="stat">
                 <span className="stat-label">总市值</span>

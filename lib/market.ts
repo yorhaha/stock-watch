@@ -469,6 +469,11 @@ export function formatPe(value: number | null | undefined): string {
   return value.toFixed(2);
 }
 
+export function formatYield(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value) || value <= 0) return "—";
+  return `${value.toFixed(2)}%`;
+}
+
 export function formatSignedAmount(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "—";
   return `${value > 0 ? "+" : ""}${formatAmount(value)}`;

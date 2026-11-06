@@ -622,6 +622,87 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
+.market-breadth {
+  padding-top: 12px;
+  margin-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.breadth-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  padding: 0 12px;
+}
+
+.breadth-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.breadth-label {
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 450;
+}
+
+.breadth-value {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.breadth-stat.is-up .breadth-value {
+  color: var(--up);
+}
+
+.breadth-stat.is-down .breadth-value {
+  color: var(--down);
+}
+
+.breadth-stat.is-total {
+  margin-left: auto;
+}
+
+.breadth-bar {
+  display: flex;
+  height: 4px;
+  margin: 9px 12px 0;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--soft);
+}
+
+.breadth-segment {
+  flex-basis: 0;
+  height: 100%;
+}
+
+.breadth-segment.is-limit-up {
+  background: var(--up);
+}
+
+.breadth-segment.is-up {
+  background: color-mix(in srgb, var(--up) 36%, var(--soft));
+}
+
+.breadth-segment.is-flat {
+  background: var(--line-strong);
+}
+
+.breadth-segment.is-down {
+  background: color-mix(in srgb, var(--down) 36%, var(--soft));
+}
+
+.breadth-segment.is-limit-down {
+  background: var(--down);
+}
+
 .watchlist {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -1019,7 +1100,7 @@ a {
 
 .detail-stats {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   margin-top: 16px;
   padding-top: 13px;
   border-top: 1px solid var(--line);
@@ -2546,6 +2627,33 @@ a {
     font-size: 9px;
   }
 
+  .market-breadth {
+    padding-top: 9px;
+    margin-top: 16px;
+  }
+
+  .breadth-stats {
+    gap: 4px 10px;
+    padding: 0 8px;
+  }
+
+  .breadth-label {
+    font-size: 9px;
+  }
+
+  .breadth-value {
+    font-size: 11px;
+  }
+
+  .breadth-stat.is-total {
+    margin-left: 0;
+  }
+
+  .breadth-bar {
+    height: 3px;
+    margin: 8px 8px 0;
+  }
+
   .watchlist-toolbar {
     min-height: 22px;
     padding: 0 8px;
@@ -2697,7 +2805,7 @@ a {
   }
 
   .detail-stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px 0;
     margin-top: 10px;
     padding-top: 10px;
@@ -2707,7 +2815,7 @@ a {
     padding: 0 8px;
   }
 
-  .stat:nth-child(3n + 1) {
+  .stat:nth-child(4n + 1) {
     padding-left: 0;
     border-left: 0;
   }

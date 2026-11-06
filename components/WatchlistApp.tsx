@@ -33,6 +33,7 @@ import { SettingsPopover } from "./SettingsPopover";
 import { StockRow } from "./StockRow";
 import { DetailSheet } from "./DetailSheet";
 import { EconomicCalendar } from "./EconomicCalendar";
+import { MarketBreadth } from "./MarketBreadth";
 
 interface Toast {
   id: number;
@@ -572,6 +573,7 @@ export function WatchlistApp() {
         </section>
 
         <EconomicCalendar />
+        <MarketBreadth active={session.isTrading || session.isAuction} />
       </main>
 
       {detailTarget && detailInstrument ? (

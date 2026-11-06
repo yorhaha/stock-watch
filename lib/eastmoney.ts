@@ -2,11 +2,21 @@ import {
   A50_TRADING_SESSION,
   BRENT_TRADING_SESSION,
   isFundCode,
+  isStockCode,
   isWatchlistCode,
+  MARKET_TIME_ZONE,
   marketOfSecid,
   tradingMinuteFromTime,
 } from "./market";
-import type { Candle, MarketKind, Quote, SearchStock, Trend, TrendPoint } from "./types";
+import type {
+  Candle,
+  MarketBreadth,
+  MarketKind,
+  Quote,
+  SearchStock,
+  Trend,
+  TrendPoint,
+} from "./types";
 
 const QUOTE_ENDPOINT = "https://push2.eastmoney.com/api/qt/ulist.np/get";
 const QUOTE_FALLBACK_ENDPOINT =
@@ -20,6 +30,12 @@ const SEARCH_ENDPOINT = "https://searchapi.eastmoney.com/api/suggest/get";
 const SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E326E8";
 const QUOTE_TOKEN = "fa5fd1943c7b386f172d6893dbfba10b";
 const QUOTE_MARKETS = new Set([0, 1, 100, 101, 103, 104, 112, 124]);
+const BREADTH_SECIDS = ["1.000001", "0.399001"];
+const BREADTH_FIELDS = ["f6", "f104", "f105", "f106", "f124"].join(",");
+const POOL_ENDPOINT = "https://push2ex.eastmoney.com/getTopic";
+const POOL_TOKEN = "7eea3edcaed734bea9cbfc24409ed989";
+const DIVIDEND_ENDPOINT = "https://datacenter-web.eastmoney.com/api/data/v1/get";
+const DIVIDEND_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
 
 const QUOTE_FIELDS = [
   "f2",
@@ -505,6 +521,181 @@ export async function fetchDailyKline(
   }
   if (candles.length === 0) throw new Error("日K数据暂不可用");
   return candles;
+}
+
+const breadthDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: MARKET_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function beijingDate(stampSeconds: number): string {
+  const date = stampSeconds > 0 ? new Date(stampSeconds * 1000) : new Date();
+  const parts = breadthDateFormatter.formatToParts(date);
+  const part = (type: "year" | "month" | "day") =>
+    parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function countOf(value: Primitive): number {
+  const parsed = numeric(value);
+  return parsed != null && parsed > 0 ? parsed : 0;
+}
+
+interface BreadthRow {
+  f6?: Primitive;
+  f104?: Primitive;
+  f105?: Primitive;
+  f106?: Primitive;
+  f124?: Primitive;
+}
+
+interface BreadthBase {
+  up: number;
+  flat: number;
+  down: number;
+  amount: number | null;
+  tradeDate: string;
+}
+
+async function requestBreadth(
+  endpoint: string,
+  signal?: AbortSignal,
+): Promise<BreadthBase> {
+  const params = new URLSearchParams({
+    fltt: "2",
+    secids: BREADTH_SECIDS.join(","),
+    fields: BREADTH_FIELDS,
+    ut: QUOTE_TOKEN,
+  });
+  const payload = (await fetchJson(
+    `${endpoint}?${params.toString()}&_=${Date.now()}`,
+    signal,
+  )) as { data?: { diff?: BreadthRow[] } };
+
+  const rows = payload.data?.diff ?? [];
+  let up = 0;
+  let flat = 0;
+  let down = 0;
+  let amount = 0;
+  let stamp = 0;
+  for (const row of rows) {
+    up += countOf(row.f104);
+    down += countOf(row.f105);
+    flat += countOf(row.f106);
+    amount += countOf(row.f6);
+    stamp = Math.max(stamp, countOf(row.f124));
+  }
+  if (rows.length < BREADTH_SECIDS.length || up + flat + down === 0) {
+    throw new Error("市场涨跌数据暂不可用");
+  }
+  return {
+    up,
+    flat,
+    down,
+    amount: amount > 0 ? amount : null,
+    tradeDate: beijingDate(stamp),
+  };
+}
+
+async function fetchPoolCount(
+  kind: "ZT" | "DT",
+  date: string,
+  signal?: AbortSignal,
+): Promise<number | null> {
+  const params = new URLSearchParams({
+    ut: POOL_TOKEN,
+    dpt: "wz.ztzt",
+    Pageindex: "0",
+    pagesize: "1",
+    sort: kind === "ZT" ? "fbt:asc" : "fund:asc",
+    date,
+  });
+  try {
+    const payload = (await fetchJson(
+      `${POOL_ENDPOINT}${kind}Pool?${params.toString()}`,
+      signal,
+    )) as { data?: { tc?: Primitive } | null };
+    const count = numeric(payload.data?.tc);
+    return count != null && count >= 0 ? count : null;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return null;
+  }
+}
+
+export async function fetchMarketBreadth(signal?: AbortSignal): Promise<MarketBreadth> {
+  let base: BreadthBase;
+  try {
+    base = await requestBreadth(QUOTE_ENDPOINT, signal);
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    base = await requestBreadth(QUOTE_FALLBACK_ENDPOINT, signal);
+  }
+  const date = base.tradeDate.replace(/-/g, "");
+  const [limitUp, limitDown] = await Promise.all([
+    fetchPoolCount("ZT", date, signal),
+    fetchPoolCount("DT", date, signal),
+  ]);
+  return { ...base, limitUp, limitDown };
+}
+
+interface DividendRow {
+  PRETAX_BONUS_RMB?: Primitive;
+  EX_DIVIDEND_DATE?: Primitive;
+}
+
+/**
+ * Cash dividends per share paid within the trailing year. Falls back to the
+ * latest cash dividend for annual payers whose ex-date slipped past the window.
+ */
+export async function fetchDividendPerShare(
+  secid: string,
+  signal?: AbortSignal,
+): Promise<number | null> {
+  const code = secid.split(".")[1] ?? "";
+  if (!isStockCode(code)) return null;
+  const params = new URLSearchParams({
+    reportName: "RPT_SHAREBONUS_DET",
+    columns: "SECURITY_CODE,PRETAX_BONUS_RMB,EX_DIVIDEND_DATE",
+    filter: `(SECURITY_CODE="${code}")`,
+    pageNumber: "1",
+    pageSize: "20",
+    sortTypes: "-1",
+    sortColumns: "EX_DIVIDEND_DATE",
+    source: "WEB",
+    client: "WEB",
+  });
+  const payload = (await fetchJson(
+    `${DIVIDEND_ENDPOINT}?${params.toString()}`,
+    signal,
+  )) as { result?: { data?: DividendRow[] | null } };
+
+  const now = Date.now();
+  const seen = new Set<number>();
+  let total = 0;
+  let latest: { perShare: number; stamp: number } | null = null;
+  for (const row of payload.result?.data ?? []) {
+    const perTen = numeric(row.PRETAX_BONUS_RMB);
+    const rawDate = row.EX_DIVIDEND_DATE;
+    if (perTen == null || perTen <= 0 || typeof rawDate !== "string") continue;
+    const stamp = Date.parse(`${rawDate.replace(" ", "T")}+08:00`);
+    if (!Number.isFinite(stamp) || stamp > now || seen.has(stamp)) continue;
+    seen.add(stamp);
+    const perShare = perTen / 10;
+    if (latest == null) latest = { perShare, stamp };
+    // Rows arrive newest first, so everything past this point is older too.
+    if (now - stamp > DIVIDEND_WINDOW_MS) break;
+    total += perShare;
+  }
+  const perShare =
+    total > 0
+      ? total
+      : latest && now - latest.stamp <= DIVIDEND_WINDOW_MS * 2
+        ? latest.perShare
+        : null;
+  return perShare != null && perShare > 0 ? perShare : null;
 }
 
 let jsonpSequence = 0;

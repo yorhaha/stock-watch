@@ -65,6 +65,16 @@ export interface KlinePoint extends Candle {
   t30: number | null;
 }
 
+export interface MarketBreadth {
+  up: number;
+  flat: number;
+  down: number;
+  limitUp: number | null;
+  limitDown: number | null;
+  amount: number | null;
+  tradeDate: string;
+}
+
 export interface SearchStock extends StockRef {
   alreadyAdded?: boolean;
 }
