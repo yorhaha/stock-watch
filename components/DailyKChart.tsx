@@ -148,6 +148,9 @@ export const DailyKChart = memo(function DailyKChart({
   );
 
   const hovered = hoverIndex != null ? points[hoverIndex] : null;
+  const active = hovered ?? points[points.length - 1] ?? null;
+  const legendValue = (value: number | null | undefined) =>
+    value == null || !Number.isFinite(value) ? "—" : formatValue(value);
   const hoverX = hovered && hoverIndex != null ? xFor(hoverIndex) : 0;
   const hoverY = hovered ? yFor(hovered.close) : 0;
   const tooltipFlip = geometry.chartWidth > 0 && hoverX > geometry.chartWidth * 0.6;
@@ -176,7 +179,33 @@ export const DailyKChart = memo(function DailyKChart({
   );
 
   return (
-    <div className="detail-chart kline-chart" ref={containerRef}>
+    <>
+      <div className="detail-head">
+        <span className="detail-panel-title">日K</span>
+        <span className="detail-legends is-stacked">
+          <span className="legend">
+            <i className="legend-line ma5" />
+            MA5
+            <span className="legend-value">{legendValue(active?.ma5)}</span>
+          </span>
+          <span className="legend">
+            <i className="legend-line ma10" />
+            MA10
+            <span className="legend-value">{legendValue(active?.ma10)}</span>
+          </span>
+          <span className="legend">
+            <i className="legend-line t70" />
+            T70
+            <span className="legend-value">{legendValue(active?.t70)}</span>
+          </span>
+          <span className="legend">
+            <i className="legend-line t30" />
+            T30
+            <span className="legend-value">{legendValue(active?.t30)}</span>
+          </span>
+        </span>
+      </div>
+      <div className="detail-chart kline-chart" ref={containerRef}>
       {width > 0 && points.length > 0 ? (
         <>
           <svg
@@ -312,6 +341,7 @@ export const DailyKChart = memo(function DailyKChart({
           <span className="chart-skeleton-line" />
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 });

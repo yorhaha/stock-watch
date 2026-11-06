@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef } from "react";
 import { useDividendYield } from "@/hooks/useDividendYield";
 import {
+  currentMarketClock,
   formatAmount,
   formatDelta,
   formatIndexDelta,
@@ -11,12 +12,14 @@ import {
   formatPercent,
   formatPrice,
   formatSignedAmount,
+  formatTradeDate,
   formatVolume,
   formatYield,
   isStockCode,
   toneOf,
+  tradingMinuteFromTime,
 } from "@/lib/market";
-import type { Quote, StockRef, Trend } from "@/lib/types";
+import type { Quote, SessionInfo, StockRef, Trend } from "@/lib/types";
 import { DailyKChart } from "./DailyKChart";
 import { DetailChart } from "./DetailChart";
 import { BookmarkIcon, CloseIcon } from "./Icons";
@@ -26,6 +29,7 @@ interface DetailSheetProps {
   kind: "stock" | "index";
   quote?: Quote;
   trend?: Trend;
+  session: SessionInfo;
   held?: boolean;
   onToggleHeld?: (secid: string) => void;
   onClose: () => void;
@@ -36,6 +40,7 @@ export function DetailSheet({
   kind,
   quote,
   trend,
+  session,
   held = false,
   onToggleHeld,
   onClose,
@@ -55,6 +60,25 @@ export function DetailSheet({
     quote?.price,
     !isIndex && isStockCode(code),
   );
+  const elapsedMinutes = tradingMinuteFromTime(currentMarketClock());
+  const estimateLive =
+    trend != null &&
+    formatTradeDate(trend.tradeDate) === session.dateLabel &&
+    (session.phase === "open" || session.phase === "lunch");
+  const estimatedVolume =
+    estimateLive &&
+    elapsedMinutes > 0 &&
+    elapsedMinutes < 240 &&
+    quote?.volume != null &&
+    quote.volume > 0
+      ? (quote.volume / elapsedMinutes) * 240
+      : null;
+  const volumeRatio =
+    quote?.volumeRatio != null && Number.isFinite(quote.volumeRatio)
+      ? quote.volumeRatio
+      : null;
+  const volumeState =
+    volumeRatio == null ? null : volumeRatio >= 1.5 ? "放量" : volumeRatio <= 0.8 ? "缩量" : null;
   const hasAverage = useMemo(
     () => trend == null || trend.points.some((point) => point.average != null),
     [trend],
@@ -172,27 +196,6 @@ export function DetailSheet({
               <DetailChart trend={trend} quote={quote} name={name} code={code} kind={kind} />
             </section>
             <section className="detail-panel">
-              <div className="detail-head">
-                <span className="detail-panel-title">日K</span>
-                <span className="detail-legends">
-                  <span className="legend">
-                    <i className="legend-line ma5" />
-                    MA5
-                  </span>
-                  <span className="legend">
-                    <i className="legend-line ma10" />
-                    MA10
-                  </span>
-                  <span className="legend">
-                    <i className="legend-line t70" />
-                    T70
-                  </span>
-                  <span className="legend">
-                    <i className="legend-line t30" />
-                    T30
-                  </span>
-                </span>
-              </div>
               <DailyKChart secid={instrument.secid} name={name} code={code} kind={kind} />
             </section>
           </div>
@@ -222,6 +225,14 @@ export function DetailSheet({
               <div className="stat">
                 <span className="stat-label">成交量</span>
                 <span className="stat-value">{formatVolume(quote?.volume)}</span>
+                {estimatedVolume != null ? (
+                  <span className="stat-note">预估 {formatVolume(estimatedVolume)}</span>
+                ) : null}
+              </div>
+              <div className="stat">
+                <span className="stat-label">量比</span>
+                <span className="stat-value">{formatPe(volumeRatio)}</span>
+                {volumeState ? <span className="stat-note">{volumeState}</span> : null}
               </div>
               <div className="stat">
                 <span className="stat-label">主力净流入</span>

@@ -896,6 +896,7 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 27px;
   margin-bottom: 10px;
 }
 
@@ -919,6 +920,23 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+}
+
+.detail-legends.is-stacked {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 2px 14px;
+  line-height: 1.3;
+}
+
+.detail-legends.is-stacked .legend {
+  gap: 4px;
+}
+
+.legend-value {
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
 }
 
 .legend-line {
@@ -1100,7 +1118,8 @@ a {
 
 .detail-stats {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 0;
   margin-top: 16px;
   padding-top: 13px;
   border-top: 1px solid var(--line);
@@ -1112,7 +1131,7 @@ a {
   border-left: 1px solid var(--line);
 }
 
-.stat:first-child {
+.stat:nth-child(4n + 1) {
   padding-left: 0;
   border-left: 0;
 }
@@ -1133,6 +1152,19 @@ a {
   font-size: 11px;
   font-weight: 520;
   letter-spacing: -0.005em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-note {
+  display: block;
+  overflow: hidden;
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 9px;
+  font-weight: 450;
+  letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -2815,11 +2847,6 @@ a {
     padding: 0 8px;
   }
 
-  .stat:nth-child(4n + 1) {
-    padding-left: 0;
-    border-left: 0;
-  }
-
   .stat-label {
     margin-bottom: 3px;
     font-size: 8px;
@@ -2828,6 +2855,10 @@ a {
 
   .stat-value {
     font-size: 10px;
+  }
+
+  .stat-note {
+    font-size: 8px;
   }
 
   .detail-sheet .detail-head {

@@ -583,6 +583,7 @@ export function WatchlistApp() {
           kind={detailTarget.kind}
           quote={quotes[detailInstrument.secid]}
           trend={trends[detailInstrument.secid]}
+          session={session}
           held={detailTarget.kind === "stock" ? detailInstrument.held === true : undefined}
           onToggleHeld={detailTarget.kind === "stock" ? toggleHeld : undefined}
           onClose={closeDetail}
