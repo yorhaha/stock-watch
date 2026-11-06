@@ -1,6 +1,6 @@
 import type { Candle, KlinePoint } from "./types";
 
-export const KLINE_BARS = 90;
+const KLINE_BARS = 90;
 
 /**
  * Recreates the TDX indicator lines on daily closes:

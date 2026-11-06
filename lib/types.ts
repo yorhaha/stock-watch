@@ -71,7 +71,6 @@ export interface MarketBreadth {
   down: number;
   limitUp: number | null;
   limitDown: number | null;
-  volumeRatio: number | null;
   tradeDate: string;
 }
 

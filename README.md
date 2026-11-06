@@ -106,24 +106,34 @@ components/
   DetailSheet.tsx     # 股票 / 指数详情层与自选移除
   Sparkline.tsx       # 列表用分时缩略线
   DetailChart.tsx     # 分时主图、成交量、悬停十字线
+  DailyKChart.tsx     # 日K图、均线与悬停十字线
   AddStockDialog.tsx  # ⌘K 搜索添加 / 批量导入
   BatchImportPanel.tsx # 多行名称识别与导入
-  SettingsPopover.tsx # 主题、涨跌色、显示、指数与刷新
+  SettingsPopover.tsx # 主题、价格、指数、持有与刷新
   IndexStrip.tsx      # 自定义指数走势条
   IndexManagerDialog.tsx # 指数预设选择、排序与移除
   MarketClock.tsx     # 上海时间与市场状态
   EconomicCalendar.tsx # 页尾财经日历
+  MarketBreadth.tsx   # 沪深涨跌统计
+  ResourceHints.tsx   # 行情接口预连接
 hooks/
   useMarketData.ts    # 批量行情、分时、轮询与页面可见性
+  useMarketSession.ts # 交易时段与市场时钟
   useWatchlist.ts     # 自选持久化
   useIndices.ts       # 自定义指数持久化
   usePreferences.ts   # 主题与显示偏好
   useEconomicEvents.ts # 财经日历每日缓存
+  useMarketBreadth.ts # 涨跌统计轮询
+  useDailyKline.ts    # 日K数据缓存
+  useDividendYield.ts # 股息率计算
+  useElementWidth.ts  # 响应式图表宽度
 lib/
   eastmoney.ts        # 行情 / 分时 / 搜索数据源
   events.ts           # 财经日历获取、解析与北京时间格式化
   chart.ts            # 纯函数图表几何计算
+  kline.ts            # 日K聚合、均线与可见区间
   market.ts           # 交易时段、格式化、默认自选、ETF 校验与涨跌幅排序
+  types.ts            # 共享数据类型
 ```
 
 设计上刻意没有引入 UI 组件库或图表库：图表路径、布局、动效与交互都由少量纯函数和 CSS 实现。这样页面没有运行时框架负担，视觉也能保持统一。
@@ -133,7 +143,7 @@ lib/
 ## 数据说明
 
 - 行情、分时、股票 / ETF 搜索均来自**东方财富公开接口**，在浏览器端直接请求，项目本身不存储任何行情数据。港股与韩国指数按北京时间显示交易时段（港股 09:30–12:00、13:00–16:00；韩国 08:00–14:30）。小型纳指与 COMEX 黄金属于美股期货，按北京时间覆盖 23 小时连续交易（冬令时 07:00–次日 06:00，夏令时 06:00–次日 05:00），分时图会自动按当季时长标注时间轴。布伦特原油当月连续按北京时间 22 小时连续交易（冬令时 09:00–次日 07:00，夏令时 08:00–次日 06:00）。A50 期指当月连续按北京时间 16:45–次日 05:15、09:00–16:30 两段交易，分时图会跳过 05:15–09:00 的休市。
-- 公开接口可能变更、限流或出现延迟，页面会在连接异常时保留最近一次数据并提示重试；开盘前当日分时为空时，会自动回退到最近交易日的分时。
+- 公开接口可能变更、限流或出现延迟，页面会在连接异常时保留最近一次数据，并在连接恢复后自动补刷；开盘前当日分时为空时，会自动回退到最近交易日的分时。
 - 财经日历来自**东方财富经济数据日历**，浏览器每天最多请求一次并缓存在本地；接口失败时沿用上次成功结果。时间统一按北京时间显示。股指期货交割日按每月第三个周五推算，并用 [holiday-cn](https://github.com/NateScarlet/holiday-cn) 的法定节假日数据跳过休市日。
 - 交易日状态按北京时间与工作日推算，未接入单独的节假日日历。
 - 本项目仅用于学习与个人看盘，**不构成任何投资建议**。

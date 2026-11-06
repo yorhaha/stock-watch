@@ -5,7 +5,7 @@ export const MARKET_TIME_ZONE = "Asia/Shanghai";
 export const WATCHLIST_LIMIT = 30;
 export const INDEX_LIMIT = 9;
 
-export interface MarketProfile {
+interface MarketProfile {
   totalMinutes: number;
   axisLabels: [string, string, string];
 }
@@ -29,7 +29,7 @@ export const BRENT_TRADING_SESSION = {
   axisLabels: ["09:00", "20:00", "07:00"] as [string, string, string],
 };
 
-export const MARKET_PROFILES: Record<MarketKind, MarketProfile> = {
+const MARKET_PROFILES: Record<MarketKind, MarketProfile> = {
   cn: { totalMinutes: 240, axisLabels: ["09:30", "11:30 / 13:00", "15:00"] },
   hk: { totalMinutes: 330, axisLabels: ["09:30", "12:00 / 13:00", "16:00"] },
   kr: { totalMinutes: 390, axisLabels: ["08:00", "11:15", "14:30"] },
@@ -144,14 +144,6 @@ const clockFormatter = new Intl.DateTimeFormat("en-US", {
   hourCycle: "h23",
 });
 
-const syncTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
-  timeZone: MARKET_TIME_ZONE,
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  hourCycle: "h23",
-});
-
 const weekdayMap: Record<string, string> = {
   Sun: "周日",
   Mon: "周一",
@@ -177,10 +169,6 @@ function readParts(now = new Date()) {
   return parts;
 }
 
-function minutesOf(parts: Record<string, string>): number {
-  return Number(parts.hour ?? "0") * 60 + Number(parts.minute ?? "0");
-}
-
 function isTradingWindowFor(
   weekday: string,
   minutes: number,
@@ -188,14 +176,6 @@ function isTradingWindowFor(
 ): boolean {
   if (weekday === "Sat" || weekday === "Sun") return false;
   return windows.some(([start, end]) => minutes >= start && minutes < end);
-}
-
-function isTradingWindow(
-  now: Date,
-  windows: Array<[start: number, end: number]>,
-): boolean {
-  const parts = readParts(now);
-  return isTradingWindowFor(parts.weekday ?? "Mon", minutesOf(parts), windows);
 }
 
 export function getMarketSession(now = new Date()): SessionInfo {
@@ -273,14 +253,6 @@ export function currentMarketClock(now = new Date()): string {
   return `${hour}:${minute}:${second}`;
 }
 
-export function isHongKongMarketOpen(now = new Date()): boolean {
-  return isTradingWindow(now, HONG_KONG_WINDOWS);
-}
-
-export function isKoreanMarketOpen(now = new Date()): boolean {
-  return isTradingWindow(now, KOREAN_WINDOWS);
-}
-
 const zoneOffsetFormatters = new Map<string, Intl.DateTimeFormat>();
 
 function zoneOffsetMinutes(now: Date, timeZone: string, fallback: number): number {
@@ -336,22 +308,6 @@ function isOvernightSessionOpenFor(
   return isOvernight && minutes < bounds.close;
 }
 
-function isOvernightSessionOpen(
-  now: Date,
-  bounds: { open: number; close: number },
-): boolean {
-  const parts = readParts(now);
-  return isOvernightSessionOpenFor(parts.weekday ?? "Mon", minutesOf(parts), bounds);
-}
-
-export function isFuturesMarketOpen(now = new Date()): boolean {
-  return isOvernightSessionOpen(now, futuresSessionBounds(now));
-}
-
-export function isBrentMarketOpen(now = new Date()): boolean {
-  return isOvernightSessionOpen(now, brentSessionBounds(now));
-}
-
 function minuteOfTime(value: string): number {
   const time = value.includes(" ") ? value.split(" ")[1] : value;
   const [hour, minute] = time.split(":").map(Number);
@@ -404,13 +360,7 @@ export function marketProfileFor(trend?: Trend | null): MarketProfile {
   };
 }
 
-export function formatTradeDate(value: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return value;
-  return `${Number(match[2])}月${Number(match[3])}日`;
-}
-
-export function pricePrecision(code: string | null | undefined): number {
+function pricePrecision(code: string | null | undefined): number {
   return code && isFundCode(code) ? 3 : 2;
 }
 
@@ -499,11 +449,6 @@ export function formatVolume(
   return `${integerFormatter.format(Math.round(value))}${suffix}`;
 }
 
-export function formatSyncTime(timestamp: number | null): string {
-  if (!timestamp) return "—";
-  return syncTimeFormatter.format(new Date(timestamp));
-}
-
 export function toneOf(value: number | null | undefined): "up" | "down" | "flat" {
   if (value == null || !Number.isFinite(value) || Math.abs(value) < 0.0001) return "flat";
   return value > 0 ? "up" : "down";
@@ -521,7 +466,7 @@ export function isWatchlistCode(code: string): boolean {
   return isStockCode(code) || isFundCode(code);
 }
 
-export function isIndexCode(code: string): boolean {
+function isIndexCode(code: string): boolean {
   return /^(000|399|899|930|931|932)\d{3}$/.test(code);
 }
 

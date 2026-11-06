@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchQuotes, fetchTrend, mapWithConcurrency } from "@/lib/eastmoney";
 import { marketOfSecid, marketProfileFor } from "@/lib/market";
 import type { Quote, SessionInfo, Trend } from "@/lib/types";
@@ -13,9 +13,6 @@ interface MarketData {
   quotes: Record<string, Quote>;
   trends: Record<string, Trend>;
   status: DataStatus;
-  error: string | null;
-  lastSyncedAt: number | null;
-  refresh: () => void;
 }
 
 function quotesEqual(a: Quote, b: Quote): boolean {
@@ -127,9 +124,6 @@ export function useMarketData(
   const trendsRef = useRef(trends);
   trendsRef.current = trends;
   const [status, setStatus] = useState<DataStatus>("loading");
-  const [error, setError] = useState<string | null>(null);
-  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
-  const [refreshNonce, setRefreshNonce] = useState(0);
   const hasData = useRef(false);
   const quoteCache = useRef<Record<string, Quote>>({});
   const trendFetchedAt = useRef(new Map<string, number>());
@@ -159,23 +153,12 @@ export function useMarketData(
         if (merged) {
           quoteCache.current = merged;
           setQuotes(merged);
-          setLastSyncedAt(Date.now());
-        } else if (!hasData.current) {
-          setLastSyncedAt(Date.now());
         }
         hasData.current = true;
         setStatus("ready");
-        setError(null);
-      } catch (reason) {
+      } catch {
         if (disposed || controller.signal.aborted) return;
         setStatus(hasData.current ? "stale" : "error");
-        setError(
-          reason instanceof TypeError
-            ? "行情接口连接失败"
-            : reason instanceof Error
-              ? reason.message
-              : "行情连接中断",
-        );
       } finally {
         quoteBusy = false;
       }
@@ -197,7 +180,7 @@ export function useMarketData(
       window.clearInterval(quoteTimer);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [ready, key, active, refreshMs, refreshNonce]);
+  }, [ready, key, active, refreshMs]);
 
   useEffect(() => {
     if (!ready || !key) return;
@@ -264,9 +247,5 @@ export function useMarketData(
     };
   }, [ready, key, active, session]);
 
-  const refresh = useCallback(() => {
-    setRefreshNonce((value) => value + 1);
-  }, []);
-
-  return { quotes, trends, status, error, lastSyncedAt, refresh };
+  return { quotes, trends, status };
 }

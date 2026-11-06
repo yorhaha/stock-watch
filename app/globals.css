@@ -2,7 +2,6 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
     "Segoe UI Variable", "Segoe UI", "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", sans-serif;
-  --font-mono: "SF Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
   --bg: #f8f8f6;
   --bg-elevated: #ffffff;
@@ -480,87 +479,6 @@ a {
   margin-top: 22px;
 }
 
-.watchlist-toolbar {
-  display: flex;
-  min-height: 24px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 0 12px;
-  margin-bottom: 4px;
-}
-
-.data-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 0;
-  border: 0;
-  background: none;
-  color: var(--text-3);
-  font-size: 10px;
-  cursor: pointer;
-  transition: color 150ms ease;
-}
-
-.data-status:hover {
-  color: var(--text-2);
-}
-
-.data-status time {
-  font-variant-numeric: tabular-nums;
-}
-
-.data-status svg {
-  opacity: 0;
-  transform: rotate(0deg);
-  transition:
-    opacity 150ms ease,
-    transform 300ms ease;
-}
-
-.data-status:hover svg {
-  opacity: 0.72;
-  transform: rotate(50deg);
-}
-
-.data-status.stale,
-.data-status.error {
-  color: var(--warn);
-}
-
-.data-status .status-alert {
-  opacity: 1;
-  transform: none;
-}
-
-.data-status:hover .status-alert {
-  transform: none;
-}
-
-.data-dot {
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: var(--text-3);
-}
-
-.data-dot.ready {
-  background: var(--live);
-}
-
-.data-dot.loading {
-  background: var(--avg);
-  animation: livePulse 1.8s ease-out infinite;
-}
-
-.data-dot.stale,
-.data-dot.error {
-  background: var(--warn);
-}
-
 .economic-calendar {
   padding-top: 12px;
   margin-top: 22px;
@@ -657,13 +575,6 @@ a {
 
 .breadth-stat.is-down .breadth-value {
   color: var(--down);
-}
-
-.breadth-ratio {
-  color: var(--text-3);
-  font-size: 10px;
-  font-weight: 450;
-  font-variant-numeric: tabular-nums;
 }
 
 .breadth-bar {
@@ -2327,17 +2238,6 @@ a {
   }
 }
 
-@keyframes detailIn {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes softShimmer {
   0%,
   100% {
@@ -2636,30 +2536,9 @@ a {
     font-size: 11px;
   }
 
-  .breadth-ratio {
-    font-size: 9px;
-  }
-
   .breadth-bar {
     height: 3px;
     margin: 8px 8px 0;
-  }
-
-  .watchlist-toolbar {
-    min-height: 22px;
-    padding: 0 8px;
-    margin-bottom: 1px;
-  }
-
-  .data-status {
-    gap: 5px;
-    padding: 3px 0;
-    font-size: 8px;
-  }
-
-  .data-status svg {
-    width: 10px;
-    height: 10px;
   }
 
   .stock-main {

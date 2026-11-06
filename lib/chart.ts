@@ -1,6 +1,6 @@
 import type { Trend, TrendPoint } from "./types";
 
-export interface SeriesPoint {
+interface SeriesPoint {
   minute: number;
   price: number;
   average?: number | null;
@@ -9,12 +9,12 @@ export interface SeriesPoint {
   time?: string;
 }
 
-export interface Domain {
+interface Domain {
   min: number;
   max: number;
 }
 
-export interface PriceRange {
+interface PriceRange {
   min: number;
   max: number;
 }

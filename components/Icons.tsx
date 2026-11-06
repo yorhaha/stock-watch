@@ -97,14 +97,6 @@ export function AlertIcon(props: IconProps) {
   );
 }
 
-export function RefreshIcon(props: IconProps) {
-  return (
-    <IconBase {...props}>
-      <path d="M19.2 8.5A7.7 7.7 0 1 0 19 15M19.2 4.8v3.7h-3.7" />
-    </IconBase>
-  );
-}
-
 export function SortIcon(props: IconProps) {
   return (
     <IconBase {...props}>

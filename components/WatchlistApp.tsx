@@ -8,8 +8,6 @@ import { usePreferences } from "@/hooks/usePreferences";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import {
   WATCHLIST_LIMIT,
-  formatSyncTime,
-  formatTradeDate,
   isBrentIndex,
   isFuturesIndex,
   isHongKongIndex,
@@ -18,7 +16,7 @@ import {
 } from "@/lib/market";
 import type { StockRef } from "@/lib/types";
 import { AddStockDialog } from "./AddStockDialog";
-import { AlertIcon, PlusIcon, RefreshIcon, SettingsIcon } from "./Icons";
+import { PlusIcon, SettingsIcon } from "./Icons";
 import { IndexManagerDialog } from "./IndexManagerDialog";
 import { IndexStrip } from "./IndexStrip";
 import { MarketClock } from "./MarketClock";
@@ -89,7 +87,7 @@ export function WatchlistApp() {
     (hasFuturesIndex && session.isFuturesTrading) ||
     (hasBrentIndex && session.isBrentTrading);
   const ready = stocksHydrated && indicesHydrated;
-  const { quotes, trends, status, error, lastSyncedAt, refresh } = useMarketData(
+  const { quotes, trends, status } = useMarketData(
     stockSecids,
     indexSecids,
     activeMarket,
@@ -118,41 +116,12 @@ export function WatchlistApp() {
   const [toast, setToast] = useState<Toast | null>(null);
   const toastId = useRef(0);
 
-  const latestTick = useMemo(() => {
-    let date = "";
-    let time = "";
-    for (const item of [...stocks, ...indices]) {
-      const trend = trends[item.secid];
-      const last = trend?.points[trend.points.length - 1];
-      if (!trend?.tradeDate || !last) continue;
-      const stamp = last.time.includes(" ") ? last.time.split(" ") : null;
-      const pointDate = stamp ? stamp[0] : trend.tradeDate;
-      const pointTime = (stamp ? stamp[1] : last.time).slice(0, 5);
-      if (pointDate > date || (pointDate === date && pointTime > time)) {
-        date = pointDate;
-        time = pointTime;
-      }
-    }
-    return { date, time };
-  }, [stocks, indices, trends]);
-
   const detailInstrument = useMemo(() => {
     if (!detailTarget) return null;
     const list = detailTarget.kind === "stock" ? stocks : indices;
     return list.find((item) => item.secid === detailTarget.secid) ?? null;
   }, [stocks, indices, detailTarget]);
 
-  const fallbackTime = lastSyncedAt ? formatSyncTime(lastSyncedAt) : "—";
-  const dataTimeLabel = latestTick.date
-    ? `${formatTradeDate(latestTick.date)} ${latestTick.time}`
-    : fallbackTime;
-  const statusLabel =
-    status === "loading"
-      ? "正在连接行情"
-      : status === "stale" || status === "error"
-        ? "行情连接中断"
-        : `行情更新至 ${dataTimeLabel}`;
-  const hasStatusAlert = status === "stale" || status === "error";
   const modalOpen = dialogOpen || detailInstrument !== null || indexManagerOpen;
 
   const closeDetail = useCallback(() => setDetailTarget(null), []);
@@ -441,30 +410,6 @@ export function WatchlistApp() {
         />
 
         <section className="watchlist-section" id="watchlist" aria-label="自选">
-          <div className="watchlist-toolbar">
-            <button
-              type="button"
-              className={`data-status ${status}`}
-              onClick={refresh}
-              title={error ? `${statusLabel}：${error}` : "刷新行情"}
-              aria-label={`${statusLabel}${error ? `：${error}` : ""}，点击刷新`}
-            >
-              <span className={`data-dot ${status}`} />
-              <time
-                dateTime={
-                  latestTick.date ? `${latestTick.date}T${latestTick.time}:00+08:00` : undefined
-                }
-              >
-                {dataTimeLabel}
-              </time>
-              {hasStatusAlert ? (
-                <AlertIcon size={11} className="status-alert" />
-              ) : (
-                <RefreshIcon size={12} />
-              )}
-            </button>
-          </div>
-
           {!stocksHydrated ? (
             <div className="list-skeleton" aria-hidden="true">
               {Array.from({ length: 5 }).map((_, index) => (

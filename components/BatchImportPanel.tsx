@@ -35,7 +35,7 @@ function normalizeName(value: string): string {
   return value.replace(/\s+/g, "").toLowerCase();
 }
 
-export function parseBatchLines(value: string): string[] {
+function parseBatchLines(value: string): string[] {
   const lines: string[] = [];
   const seen = new Set<string>();
   for (const rawLine of value.split(/\r?\n/)) {
