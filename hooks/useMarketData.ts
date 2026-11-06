@@ -30,6 +30,7 @@ function quotesEqual(a: Quote, b: Quote): boolean {
     a.amplitude === b.amplitude &&
     a.turnover === b.turnover &&
     a.volumeRatio === b.volumeRatio &&
+    a.pe === b.pe &&
     a.high === b.high &&
     a.low === b.low &&
     a.open === b.open &&

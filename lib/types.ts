@@ -16,6 +16,7 @@ export interface Quote {
   amplitude: number | null;
   turnover: number | null;
   volumeRatio: number | null;
+  pe: number | null;
   high: number | null;
   low: number | null;
   open: number | null;

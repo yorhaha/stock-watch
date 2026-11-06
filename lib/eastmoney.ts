@@ -28,6 +28,7 @@ const QUOTE_FIELDS = [
   "f6",
   "f7",
   "f8",
+  "f9",
   "f10",
   "f12",
   "f13",
@@ -60,6 +61,7 @@ function quoteFromRaw(raw: RawRecord): Quote | null {
   const preClose = numeric(raw.f18);
   const traded = rawPrice != null && rawPrice > 0;
   const price = traded ? rawPrice : preClose != null && preClose > 0 ? preClose : null;
+  const pe = numeric(raw.f9);
   return {
     secid: `${market}.${code}`,
     code,
@@ -71,6 +73,8 @@ function quoteFromRaw(raw: RawRecord): Quote | null {
     amplitude: traded ? numeric(raw.f7) : null,
     turnover: traded ? numeric(raw.f8) : null,
     volumeRatio: traded ? numeric(raw.f10) : null,
+    // Indices and funds report 0 for PE; only stocks carry a real ratio.
+    pe: pe != null && pe !== 0 ? pe : null,
     high: traded ? numeric(raw.f15) : null,
     low: traded ? numeric(raw.f16) : null,
     open: traded ? numeric(raw.f17) : null,

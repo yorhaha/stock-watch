@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef } from "react";
-import { formatDelta, formatIndexDelta, formatIndexPrice, formatPercent, formatPrice, toneOf } from "@/lib/market";
+import { formatDelta, formatIndexDelta, formatIndexPrice, formatPe, formatPercent, formatPrice, toneOf } from "@/lib/market";
 import type { Quote, StockRef, Trend } from "@/lib/types";
 import { DailyKChart } from "./DailyKChart";
 import { DetailChart } from "./DetailChart";
@@ -118,6 +118,9 @@ export function DetailSheet({
                 <span className="detail-delta">
                   {isIndex ? formatIndexDelta(quote.change) : formatDelta(quote.change, code)}
                 </span>
+              ) : null}
+              {quote?.pe != null ? (
+                <span className="detail-pe">PE {formatPe(quote.pe)}</span>
               ) : null}
             </span>
           </div>

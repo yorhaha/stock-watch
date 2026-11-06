@@ -464,6 +464,11 @@ export function formatDelta(value: number | null | undefined, code?: string | nu
   return `${sign}${value.toFixed(pricePrecision(code))}`;
 }
 
+export function formatPe(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value) || value === 0) return "—";
+  return value.toFixed(2);
+}
+
 export function formatAmount(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "—";
   const absolute = Math.abs(value);
