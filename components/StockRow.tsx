@@ -59,22 +59,24 @@ export const StockRow = memo(function StockRow({
           }
         }}
       >
-        <div className="stock-identity">
-          <span className="stock-name" title={name}>{name}</span>
+        <div className="stock-copy">
+          <div className="stock-identity">
+            <span className="stock-name" title={name}>{name}</span>
+          </div>
+
+          <div className="stock-quote">
+            <span className="stock-price">{formatPrice(quote?.price, stock.code)}</span>
+            <span className="stock-change">
+              <Percent value={quote?.pct} />
+              {quote?.change != null ? (
+                <span className="change-delta">{formatDelta(quote.change, stock.code)}</span>
+              ) : null}
+            </span>
+          </div>
         </div>
 
         <div className="stock-spark">
           <Sparkline trend={trend} quote={quote} loading={!trend} />
-        </div>
-
-        <div className="stock-quote">
-          <span className="stock-price">{formatPrice(quote?.price, stock.code)}</span>
-          <span className="stock-change">
-            <Percent value={quote?.pct} />
-            {quote?.change != null ? (
-              <span className="change-delta">{formatDelta(quote.change, stock.code)}</span>
-            ) : null}
-          </span>
         </div>
       </div>
     </div>

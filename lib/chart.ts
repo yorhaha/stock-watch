@@ -59,6 +59,7 @@ export function priceRange(
 export function priceDomainFromRange(
   range: PriceRange,
   preClose?: number,
+  edgePadding = 0.16,
 ): Domain {
   let min = range.min;
   let max = range.max;
@@ -68,7 +69,7 @@ export function priceDomainFromRange(
   }
   const span = max - min;
   const base = Math.max(Math.abs(preClose ?? max), max, 0.01);
-  const padding = span > base * 0.0004 ? span * 0.16 : base * 0.0015;
+  const padding = span > base * 0.0004 ? span * edgePadding : base * 0.0015;
   return { min: min - padding, max: max + padding };
 }
 

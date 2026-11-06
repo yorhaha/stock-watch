@@ -21,8 +21,6 @@ interface SparklineProps {
 
 const WIDTH = 240;
 const HEIGHT = 44;
-const TOP = 4;
-const DRAW_HEIGHT = HEIGHT - TOP * 2;
 
 export const Sparkline = memo(function Sparkline({
   trend,
@@ -60,7 +58,7 @@ export const Sparkline = memo(function Sparkline({
   }, [baseRange, lastPrice]);
 
   const domain = useMemo(
-    () => (range ? priceDomainFromRange(range) : priceDomain([])),
+    () => (range ? priceDomainFromRange(range, undefined, 0.08) : priceDomain([])),
     [range],
   );
 
@@ -69,10 +67,10 @@ export const Sparkline = memo(function Sparkline({
     return linePath(
       points.slice(0, -1),
       WIDTH,
-      DRAW_HEIGHT,
+      HEIGHT,
       domain,
       (point) => point.price,
-      TOP,
+      0,
       maxMinute,
     );
   }, [points, domain, maxMinute]);
@@ -80,16 +78,16 @@ export const Sparkline = memo(function Sparkline({
   const view = useMemo(() => {
     if (!points || !lastPoint || lastPrice == null) return null;
     const lastX = scaleX(lastPoint.minute, WIDTH, maxMinute).toFixed(2);
-    const lastY = scaleY(lastPrice, domain, DRAW_HEIGHT, TOP).toFixed(2);
+    const lastY = scaleY(lastPrice, domain, HEIGHT).toFixed(2);
     const path = basePath ? `${basePath} L${lastX},${lastY}` : `M${lastX},${lastY}`;
-    const area = areaPathFromLine(path, points, WIDTH, DRAW_HEIGHT, TOP, maxMinute);
+    const area = areaPathFromLine(path, points, WIDTH, HEIGHT, 0, maxMinute);
     const tone = toneOf(preClose ? lastPrice - preClose : quote?.pct);
     const baselineY =
       preClose != null &&
       Number.isFinite(preClose) &&
       preClose >= domain.min &&
       preClose <= domain.max
-        ? scaleY(preClose, domain, DRAW_HEIGHT, TOP)
+        ? scaleY(preClose, domain, HEIGHT)
         : null;
     return { path, area, tone, baselineY };
   }, [points, lastPoint, lastPrice, basePath, domain, maxMinute, preClose, quote?.pct]);
