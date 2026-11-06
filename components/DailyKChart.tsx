@@ -151,6 +151,15 @@ export const DailyKChart = memo(function DailyKChart({
   const active = hovered ?? points[points.length - 1] ?? null;
   const legendValue = (value: number | null | undefined) =>
     value == null || !Number.isFinite(value) ? "—" : formatValue(value);
+  const legendArrow = (value: number | null | undefined) => {
+    if (active == null || value == null || !Number.isFinite(value)) return null;
+    const up = active.close >= value;
+    return (
+      <span className={`legend-arrow ${up ? "is-up" : "is-down"}`}>
+        {up ? "↑" : "↓"}
+      </span>
+    );
+  };
   const hoverX = hovered && hoverIndex != null ? xFor(hoverIndex) : 0;
   const hoverY = hovered ? yFor(hovered.close) : 0;
   const tooltipFlip = geometry.chartWidth > 0 && hoverX > geometry.chartWidth * 0.6;
@@ -187,21 +196,25 @@ export const DailyKChart = memo(function DailyKChart({
             <i className="legend-line ma5" />
             MA5
             <span className="legend-value">{legendValue(active?.ma5)}</span>
+            {legendArrow(active?.ma5)}
           </span>
           <span className="legend">
             <i className="legend-line ma10" />
             MA10
             <span className="legend-value">{legendValue(active?.ma10)}</span>
-          </span>
-          <span className="legend">
-            <i className="legend-line t70" />
-            T70
-            <span className="legend-value">{legendValue(active?.t70)}</span>
+            {legendArrow(active?.ma10)}
           </span>
           <span className="legend">
             <i className="legend-line t30" />
             T30
             <span className="legend-value">{legendValue(active?.t30)}</span>
+            {legendArrow(active?.t30)}
+          </span>
+          <span className="legend">
+            <i className="legend-line t70" />
+            T70
+            <span className="legend-value">{legendValue(active?.t70)}</span>
+            {legendArrow(active?.t70)}
           </span>
         </span>
       </div>
@@ -242,8 +255,8 @@ export const DailyKChart = memo(function DailyKChart({
 
             <path d={paths.ma5} className="k-line ma5" />
             <path d={paths.ma10} className="k-line ma10" />
-            <path d={paths.t70} className="k-line t70" />
             <path d={paths.t30} className="k-line t30" />
+            <path d={paths.t70} className="k-line t70" />
 
             <line
               x1="0"

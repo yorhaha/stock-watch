@@ -11,6 +11,11 @@ export function MarketBreadth({ active }: MarketBreadthProps) {
   const breadth = useMarketBreadth(active);
   if (!breadth) return null;
 
+  const ratio = breadth.volumeRatio;
+  const volumeTone =
+    ratio == null ? null : ratio >= 1.02 ? "up" : ratio <= 0.98 ? "down" : "flat";
+  const volumeLabel =
+    volumeTone === "up" ? "放量" : volumeTone === "down" ? "缩量" : "平量";
   const limitUp = breadth.limitUp == null ? null : Math.min(breadth.limitUp, breadth.up);
   const limitDown =
     breadth.limitDown == null ? null : Math.min(breadth.limitDown, breadth.down);
@@ -57,6 +62,16 @@ export function MarketBreadth({ active }: MarketBreadthProps) {
           <span className="breadth-label">成交</span>
           <span className="breadth-value">{formatAmount(breadth.amount)}</span>
         </span>
+        {ratio != null && volumeTone != null ? (
+          <span
+            className={`breadth-stat is-${volumeTone}`}
+            title={`两市量比 ${ratio.toFixed(2)}（相对 5 日平均成交量）`}
+          >
+            <span className="breadth-label">量能</span>
+            <span className="breadth-value">{volumeLabel}</span>
+            <span className="breadth-ratio">{ratio.toFixed(2)}</span>
+          </span>
+        ) : null}
       </div>
       <div className="breadth-bar" aria-hidden="true">
         {segments.map((segment) => (

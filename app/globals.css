@@ -665,6 +665,13 @@ a {
   color: var(--down);
 }
 
+.breadth-ratio {
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 450;
+  font-variant-numeric: tabular-nums;
+}
+
 .breadth-stat.is-total {
   margin-left: auto;
 }
@@ -937,6 +944,20 @@ a {
   color: var(--text-2);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.005em;
+}
+
+.legend-arrow {
+  font-size: 9px;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.legend-arrow.is-up {
+  color: var(--up);
+}
+
+.legend-arrow.is-down {
+  color: var(--down);
 }
 
 .legend-line {
@@ -2675,6 +2696,10 @@ a {
 
   .breadth-value {
     font-size: 11px;
+  }
+
+  .breadth-ratio {
+    font-size: 9px;
   }
 
   .breadth-stat.is-total {

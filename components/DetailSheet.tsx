@@ -73,12 +73,6 @@ export function DetailSheet({
     quote.volume > 0
       ? (quote.volume / elapsedMinutes) * 240
       : null;
-  const volumeRatio =
-    quote?.volumeRatio != null && Number.isFinite(quote.volumeRatio)
-      ? quote.volumeRatio
-      : null;
-  const volumeState =
-    volumeRatio == null ? null : volumeRatio >= 1.5 ? "放量" : volumeRatio <= 0.8 ? "缩量" : null;
   const hasAverage = useMemo(
     () => trend == null || trend.points.some((point) => point.average != null),
     [trend],
@@ -231,8 +225,7 @@ export function DetailSheet({
               </div>
               <div className="stat">
                 <span className="stat-label">量比</span>
-                <span className="stat-value">{formatPe(volumeRatio)}</span>
-                {volumeState ? <span className="stat-note">{volumeState}</span> : null}
+                <span className="stat-value">{formatPe(quote?.volumeRatio)}</span>
               </div>
               <div className="stat">
                 <span className="stat-label">主力净流入</span>

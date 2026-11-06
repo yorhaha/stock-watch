@@ -31,7 +31,7 @@ const SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E326E8";
 const QUOTE_TOKEN = "fa5fd1943c7b386f172d6893dbfba10b";
 const QUOTE_MARKETS = new Set([0, 1, 100, 101, 103, 104, 112, 124]);
 const BREADTH_SECIDS = ["1.000001", "0.399001"];
-const BREADTH_FIELDS = ["f6", "f104", "f105", "f106", "f124"].join(",");
+const BREADTH_FIELDS = ["f5", "f6", "f10", "f104", "f105", "f106", "f124"].join(",");
 const POOL_ENDPOINT = "https://push2ex.eastmoney.com/getTopic";
 const POOL_TOKEN = "7eea3edcaed734bea9cbfc24409ed989";
 const DIVIDEND_ENDPOINT = "https://datacenter-web.eastmoney.com/api/data/v1/get";
@@ -544,7 +544,9 @@ function countOf(value: Primitive): number {
 }
 
 interface BreadthRow {
+  f5?: Primitive;
   f6?: Primitive;
+  f10?: Primitive;
   f104?: Primitive;
   f105?: Primitive;
   f106?: Primitive;
@@ -556,6 +558,7 @@ interface BreadthBase {
   flat: number;
   down: number;
   amount: number | null;
+  volumeRatio: number | null;
   tradeDate: string;
 }
 
@@ -579,12 +582,20 @@ async function requestBreadth(
   let flat = 0;
   let down = 0;
   let amount = 0;
+  let volume = 0;
+  let volumeBaseline = 0;
   let stamp = 0;
   for (const row of rows) {
     up += countOf(row.f104);
     down += countOf(row.f105);
     flat += countOf(row.f106);
     amount += countOf(row.f6);
+    const rowVolume = countOf(row.f5);
+    const rowRatio = numeric(row.f10);
+    if (rowVolume > 0 && rowRatio != null && rowRatio > 0) {
+      volume += rowVolume;
+      volumeBaseline += rowVolume / rowRatio;
+    }
     stamp = Math.max(stamp, countOf(row.f124));
   }
   if (rows.length < BREADTH_SECIDS.length || up + flat + down === 0) {
@@ -595,6 +606,7 @@ async function requestBreadth(
     flat,
     down,
     amount: amount > 0 ? amount : null,
+    volumeRatio: volumeBaseline > 0 ? volume / volumeBaseline : null,
     tradeDate: beijingDate(stamp),
   };
 }
