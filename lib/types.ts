@@ -47,7 +47,7 @@ export interface Trend {
   points: TrendPoint[];
 }
 
-export interface VolumeProfile {
+export interface AmountProfile {
   tradeDate: string;
   fractions: number[];
 }

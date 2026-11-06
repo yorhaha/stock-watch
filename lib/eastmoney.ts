@@ -9,6 +9,7 @@ import {
   tradingMinuteFromTime,
 } from "./market";
 import type {
+  AmountProfile,
   Candle,
   MarketBreadth,
   MarketKind,
@@ -16,7 +17,6 @@ import type {
   SearchStock,
   Trend,
   TrendPoint,
-  VolumeProfile,
 } from "./types";
 
 const QUOTE_ENDPOINT = "https://push2.eastmoney.com/api/qt/ulist.np/get";
@@ -202,6 +202,7 @@ interface TrendRow {
   open: string;
   close: string;
   volume: string;
+  amount: string;
   average: string;
 }
 
@@ -210,19 +211,25 @@ interface TrendFields {
   open: string;
   close: string;
   volume: string;
+  amount: string;
   average: string;
 }
 
 function trendFields(values: string[]): TrendFields | null {
-  // trends2 is asked for f51,f52,f53,f56,f58 (time/open/close/volume/average).
-  // Some hosts may still answer with the legacy eight-column row, so accept both.
+  // trends2 is asked for f51,f52,f53,f56,f57,f58
+  // (time/open/close/volume/amount/average). Some hosts may still answer with
+  // the legacy eight-column row, so accept that too.
   if (values.length >= 8) {
-    const [time, open, close, , , volume, , average] = values;
-    return { time, open, close, volume, average };
+    const [time, open, close, , , volume, amount, average] = values;
+    return { time, open, close, volume, amount, average };
+  }
+  if (values.length >= 6) {
+    const [time, open, close, volume, amount, average] = values;
+    return { time, open, close, volume, amount, average };
   }
   if (values.length >= 5) {
     const [time, open, close, volume, average] = values;
-    return { time, open, close, volume, average };
+    return { time, open, close, volume, amount: "", average };
   }
   return null;
 }
@@ -254,6 +261,7 @@ function parseTrendRow(row: string): TrendRow | null {
     open: fields.open,
     close: fields.close,
     volume: fields.volume,
+    amount: fields.amount,
     average: fields.average,
   };
 }
@@ -525,54 +533,64 @@ export async function fetchDailyKline(
 }
 
 /**
- * Average share of a session's volume already traded by each minute, built
- * from the four completed sessions in a five-day intraday response. Used to
- * extrapolate today's full-day volume without assuming a flat intraday pace.
+ * Average share of a full day's turnover already traded by each minute,
+ * combined across the two exchange indices. Built from the completed sessions
+ * in a five-day intraday response; used to project the market's closing
+ * turnover without assuming a flat intraday pace.
  */
-export async function fetchVolumeProfile(
-  secid: string,
+export async function fetchMarketAmountProfile(
   signal?: AbortSignal,
-): Promise<VolumeProfile | null> {
-  const params = new URLSearchParams({
-    secid,
-    fields1: "f1,f2,f3,f4,f5,f6,f7,f8",
-    fields2: "f51,f52,f53,f56,f58",
-    iscr: "0",
-    ndays: "5",
-    ut: QUOTE_TOKEN,
-    _: String(Date.now()),
-  });
-  const payload = (await fetchKlineJson(
-    `${TREND_HISTORY_ENDPOINT}?${params.toString()}`,
-    signal,
-  )) as TrendPayload;
+): Promise<AmountProfile | null> {
+  const results = await Promise.allSettled(
+    BREADTH_SECIDS.map(async (secid) => {
+      const params = new URLSearchParams({
+        secid,
+        fields1: "f1,f2,f3,f4,f5,f6,f7,f8",
+        fields2: "f51,f52,f53,f56,f57,f58",
+        iscr: "0",
+        ndays: "5",
+        ut: QUOTE_TOKEN,
+        _: String(Date.now()),
+      });
+      return (await fetchKlineJson(
+        `${TREND_HISTORY_ENDPOINT}?${params.toString()}`,
+        signal,
+      )) as TrendPayload;
+    }),
+  );
+  if (signal?.aborted) return null;
 
-  const sessions = new Map<string, { minute: number; volume: number }[]>();
+  const sessions = new Map<string, Map<number, number>>();
   let latest = "";
-  for (const row of payload.data?.trends ?? []) {
-    const parsed = parseTrendRow(row);
-    if (!parsed) continue;
-    const volume = numeric(parsed.volume);
-    if (volume == null) continue;
-    let points = sessions.get(parsed.date);
-    if (!points) sessions.set(parsed.date, (points = []));
-    points.push({ minute: tradingMinuteFromTime(parsed.stamp), volume });
-    if (parsed.date > latest) latest = parsed.date;
+  for (const result of results) {
+    if (result.status !== "fulfilled") continue;
+    for (const row of result.value.data?.trends ?? []) {
+      const parsed = parseTrendRow(row);
+      if (!parsed) continue;
+      const amount = numeric(parsed.amount);
+      if (amount == null) continue;
+      let points = sessions.get(parsed.date);
+      if (!points) sessions.set(parsed.date, (points = new Map()));
+      const minute = tradingMinuteFromTime(parsed.stamp);
+      points.set(minute, (points.get(minute) ?? 0) + amount);
+      if (parsed.date > latest) latest = parsed.date;
+    }
   }
 
   const sums = new Array<number>(241).fill(0);
   let days = 0;
   for (const [date, points] of sessions) {
-    // Today is still in progress; only completed sessions describe a shape.
-    if (date === latest || points.length < 200) continue;
-    const total = points.reduce((sum, point) => sum + point.volume, 0);
+    // The latest day is still in progress; only completed sessions describe
+    // a full-day shape.
+    if (date === latest || points.size < 200) continue;
+    const entries = [...points.entries()].sort((a, b) => a[0] - b[0]);
+    const total = entries.reduce((sum, [, value]) => sum + value, 0);
     if (total <= 0) continue;
-    points.sort((a, b) => a.minute - b.minute);
     let cumulative = 0;
     let index = 0;
     for (let minute = 0; minute <= 240; minute += 1) {
-      while (index < points.length && points[index].minute <= minute) {
-        cumulative += points[index].volume;
+      while (index < entries.length && entries[index][0] <= minute) {
+        cumulative += entries[index][1];
         index += 1;
       }
       sums[minute] += cumulative / total;

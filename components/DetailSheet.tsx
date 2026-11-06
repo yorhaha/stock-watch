@@ -2,9 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef } from "react";
 import { useDividendYield } from "@/hooks/useDividendYield";
-import { useVolumeEstimate } from "@/hooks/useVolumeEstimate";
 import {
-  currentMarketClock,
   formatAmount,
   formatDelta,
   formatIndexDelta,
@@ -13,14 +11,11 @@ import {
   formatPercent,
   formatPrice,
   formatSignedAmount,
-  formatTradeDate,
-  formatVolume,
   formatYield,
   isStockCode,
   toneOf,
-  tradingMinuteFromTime,
 } from "@/lib/market";
-import type { Quote, SessionInfo, StockRef, Trend } from "@/lib/types";
+import type { Quote, StockRef, Trend } from "@/lib/types";
 import { DailyKChart } from "./DailyKChart";
 import { DetailChart } from "./DetailChart";
 import { BookmarkIcon, CloseIcon } from "./Icons";
@@ -30,7 +25,6 @@ interface DetailSheetProps {
   kind: "stock" | "index";
   quote?: Quote;
   trend?: Trend;
-  session: SessionInfo;
   held?: boolean;
   onToggleHeld?: (secid: string) => void;
   onClose: () => void;
@@ -41,7 +35,6 @@ export function DetailSheet({
   kind,
   quote,
   trend,
-  session,
   held = false,
   onToggleHeld,
   onClose,
@@ -60,19 +53,6 @@ export function DetailSheet({
     instrument.secid,
     quote?.price,
     !isIndex && isStockCode(code),
-  );
-  const elapsedMinutes = tradingMinuteFromTime(currentMarketClock());
-  const estimateLive =
-    trend != null &&
-    formatTradeDate(trend.tradeDate) === session.dateLabel &&
-    (session.phase === "open" || session.phase === "lunch");
-  const estimatedVolume = useVolumeEstimate(
-    instrument.secid,
-    quote?.volume,
-    trend?.tradeDate,
-    !isIndex && estimateLive && elapsedMinutes > 0 && elapsedMinutes < 240
-      ? elapsedMinutes
-      : null,
   );
   const hasAverage = useMemo(
     () => trend == null || trend.points.some((point) => point.average != null),
@@ -216,10 +196,6 @@ export function DetailSheet({
               <div className="stat">
                 <span className="stat-label">总市值</span>
                 <span className="stat-value">{formatAmount(quote?.marketCap)}</span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">预估成交量</span>
-                <span className="stat-value">{formatVolume(estimatedVolume)}</span>
               </div>
               <div className="stat">
                 <span className="stat-label">量比</span>

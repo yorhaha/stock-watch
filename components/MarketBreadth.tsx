@@ -1,14 +1,21 @@
 "use client";
 
+import { useMarketAmountEstimate } from "@/hooks/useMarketAmountEstimate";
 import { useMarketBreadth } from "@/hooks/useMarketBreadth";
-import { formatAmount } from "@/lib/market";
+import { currentMarketClock, formatAmount, tradingMinuteFromTime } from "@/lib/market";
 
 interface MarketBreadthProps {
   active: boolean;
+  live: boolean;
 }
 
-export function MarketBreadth({ active }: MarketBreadthProps) {
+export function MarketBreadth({ active, live }: MarketBreadthProps) {
   const breadth = useMarketBreadth(active);
+  const estimatedAmount = useMarketAmountEstimate(
+    breadth?.amount,
+    breadth?.tradeDate,
+    live ? tradingMinuteFromTime(currentMarketClock()) : null,
+  );
   if (!breadth) return null;
 
   const ratio = breadth.volumeRatio;
@@ -58,9 +65,20 @@ export function MarketBreadth({ active }: MarketBreadthProps) {
           <span className="breadth-label">跌停</span>
           <span className="breadth-value">{breadth.limitDown ?? "—"}</span>
         </span>
-        <span className="breadth-stat is-total">
-          <span className="breadth-label">成交</span>
-          <span className="breadth-value">{formatAmount(breadth.amount)}</span>
+        <span
+          className="breadth-stat is-total"
+          title={
+            estimatedAmount != null
+              ? "按今日盘中成交节奏预估全天两市成交额"
+              : undefined
+          }
+        >
+          <span className="breadth-label">
+            {estimatedAmount != null ? "预估成交" : "成交"}
+          </span>
+          <span className="breadth-value">
+            {formatAmount(estimatedAmount ?? breadth.amount)}
+          </span>
         </span>
         {ratio != null && volumeTone != null ? (
           <span
