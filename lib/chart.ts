@@ -162,3 +162,88 @@ export function nearestPointIndex(points: SeriesPoint[], minute: number): number
   }
   return low;
 }
+
+export interface AxisLabel {
+  key: string;
+  value: number;
+  text: string;
+  sub?: string;
+  tone?: "up" | "down" | "flat";
+  primary?: boolean;
+}
+
+export interface AxisLabelBox {
+  y: number;
+  height: number;
+}
+
+const AXIS_PRICE_FONT_SIZE = 9;
+const AXIS_SUB_FONT_SIZE = 8;
+const AXIS_LABEL_GAP = 7;
+const AXIS_LABEL_INSET = 1;
+const AXIS_MIN_WIDTH = 30;
+
+/**
+ * Approximates the rendered width of tabular numeric text. The charts render
+ * without a DOM measuring pass, so the estimate leans slightly wide: labels
+ * must never spill past the SVG's right edge.
+ */
+export function estimateTextWidth(text: string, fontSize: number): number {
+  let em = 0;
+  for (const char of text) {
+    if (char === "." || char === "," || char === ":") em += 0.28;
+    else if (char === "+" || char === "-") em += 0.36;
+    else if (char === "%") em += 0.62;
+    else if (char >= "0" && char <= "9") em += 0.6;
+    else em += 0.62;
+  }
+  return em * fontSize;
+}
+
+/** Exact-fit gutter width for the right-hand price labels. */
+export function axisWidthFor(labels: AxisLabel[]): number {
+  let width = 0;
+  for (const label of labels) {
+    width = Math.max(width, estimateTextWidth(label.text, AXIS_PRICE_FONT_SIZE));
+    if (label.sub) {
+      width = Math.max(width, estimateTextWidth(label.sub, AXIS_SUB_FONT_SIZE));
+    }
+  }
+  return Math.max(AXIS_MIN_WIDTH, Math.ceil(width) + AXIS_LABEL_GAP + AXIS_LABEL_INSET);
+}
+
+/**
+ * Keeps labels on their price level where possible and nudges them apart when
+ * levels sit closer than the text height. All returned centres stay inside
+ * [top, bottom].
+ */
+export function layoutAxisLabelCenters(
+  boxes: AxisLabelBox[],
+  top: number,
+  bottom: number,
+  gap = 4,
+): number[] {
+  if (boxes.length === 0) return [];
+  const order = boxes
+    .map((box, index) => ({ ...box, index, center: box.y }))
+    .sort((a, b) => a.y - b.y || a.index - b.index);
+
+  let cursor = top;
+  for (const item of order) {
+    const half = item.height / 2;
+    item.center = Math.max(item.y, cursor + half);
+    cursor = item.center + half + gap;
+  }
+
+  let limit = bottom;
+  for (let index = order.length - 1; index >= 0; index -= 1) {
+    const item = order[index];
+    const half = item.height / 2;
+    item.center = Math.min(item.center, limit - half);
+    limit = item.center - half - gap;
+  }
+
+  const centers = new Array<number>(boxes.length).fill(top);
+  for (const item of order) centers[item.index] = item.center;
+  return centers;
+}

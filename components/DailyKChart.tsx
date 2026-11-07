@@ -3,7 +3,13 @@
 import { memo, useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useDailyKline } from "@/hooks/useDailyKline";
 import { useElementWidth } from "@/hooks/useElementWidth";
-import { priceDomain, scaleY } from "@/lib/chart";
+import {
+  axisWidthFor,
+  layoutAxisLabelCenters,
+  priceDomain,
+  scaleY,
+  type AxisLabel,
+} from "@/lib/chart";
 import { computeKline, visibleKline } from "@/lib/kline";
 import { formatIndexPrice, formatPercent, formatPrice, formatVolume, toneOf } from "@/lib/market";
 import type { KlinePoint } from "@/lib/types";
@@ -13,6 +19,10 @@ interface DailyKChartProps {
   name: string;
   code?: string;
   kind?: "stock" | "index";
+}
+
+function formatAxisValue(value: number, kind: "stock" | "index", code?: string): string {
+  return kind === "index" ? formatIndexPrice(value) : formatPrice(value, code);
 }
 
 function linePath(
@@ -42,13 +52,36 @@ export const DailyKChart = memo(function DailyKChart({
 
   const points = useMemo(() => visibleKline(computeKline(candles)), [candles]);
 
+  // Only three price levels are labelled: the latest close and the highest and
+  // lowest traded prices inside the visible window. Identical labels merge.
+  const axisLabels = useMemo<AxisLabel[]>(() => {
+    if (points.length === 0) return [];
+    const latest = points[points.length - 1];
+    const high = Math.max(...points.map((point) => point.high));
+    const low = Math.min(...points.map((point) => point.low));
+    const entries = [
+      { key: "latest", value: latest.close, primary: true },
+      { key: "high", value: high, primary: false },
+      { key: "low", value: low, primary: false },
+    ];
+    const labels: AxisLabel[] = [];
+    const seen = new Set<string>();
+    for (const entry of entries) {
+      const text = formatAxisValue(entry.value, kind, code);
+      if (seen.has(text)) continue;
+      seen.add(text);
+      labels.push({ ...entry, text });
+    }
+    return labels;
+  }, [points, kind, code]);
+  const axisWidth = useMemo(() => axisWidthFor(axisLabels), [axisLabels]);
+
   const geometry = useMemo(() => {
-    const right = width > 0 && width < 440 ? 48 : 60;
     const top = 14;
     const priceHeight = 152;
     const volumeGap = 12;
     const volumeHeight = 42;
-    const chartWidth = Math.max(40, width - right);
+    const chartWidth = Math.max(40, width - axisWidth);
     const volumeTop = top + priceHeight + volumeGap;
     const height = volumeTop + volumeHeight + 26;
     const values: number[] = [];
@@ -62,7 +95,6 @@ export const DailyKChart = memo(function DailyKChart({
     const maxVolume = Math.max(...points.map((point) => point.volume), 1);
     const slot = chartWidth / Math.max(points.length, 1);
     return {
-      right,
       top,
       priceHeight,
       volumeGap,
@@ -74,13 +106,29 @@ export const DailyKChart = memo(function DailyKChart({
       maxVolume,
       slot,
     };
-  }, [points, width]);
+  }, [points, width, axisWidth]);
+
+  const axisLayout = useMemo(() => {
+    const boxes = axisLabels.map((label) => ({
+      y: scaleY(label.value, geometry.domain, geometry.priceHeight, geometry.top),
+      height: 12,
+    }));
+    const centers = layoutAxisLabelCenters(
+      boxes,
+      geometry.top,
+      geometry.height - 4,
+    );
+    return axisLabels.map((label, index) => ({
+      label,
+      y: boxes[index]?.y ?? geometry.top,
+      centerY: centers[index] ?? boxes[index]?.y ?? geometry.top,
+    }));
+  }, [axisLabels, geometry]);
 
   const yFor = (value: number) =>
     scaleY(value, geometry.domain, geometry.priceHeight, geometry.top);
   const xFor = (index: number) => (index + 0.5) * geometry.slot;
-  const formatValue = (value: number) =>
-    kind === "index" ? formatIndexPrice(value) : formatPrice(value, code);
+  const formatValue = (value: number) => formatAxisValue(value, kind, code);
 
   const paths = useMemo(
     () => ({
@@ -160,6 +208,13 @@ export const DailyKChart = memo(function DailyKChart({
       </span>
     );
   };
+  const legendPercent = (value: number | null | undefined) => {
+    if (active == null || value == null || !Number.isFinite(value) || active.close <= 0) {
+      return null;
+    }
+    const change = Math.abs(((value - active.close) / active.close) * 100);
+    return <span className="legend-pct">{change.toFixed(2)}%</span>;
+  };
   const hoverX = hovered && hoverIndex != null ? xFor(hoverIndex) : 0;
   const hoverY = hovered ? yFor(hovered.close) : 0;
   const tooltipFlip = geometry.chartWidth > 0 && hoverX > geometry.chartWidth * 0.6;
@@ -181,12 +236,6 @@ export const DailyKChart = memo(function DailyKChart({
     setHoverIndex(index);
   };
 
-  const tickValues = [0, 1, 2, 3].map(
-    (index) =>
-      geometry.domain.max -
-      ((geometry.domain.max - geometry.domain.min) / 3) * index,
-  );
-
   return (
     <>
       <div className="detail-head">
@@ -197,24 +246,28 @@ export const DailyKChart = memo(function DailyKChart({
             MA5
             <span className="legend-value">{legendValue(active?.ma5)}</span>
             {legendArrow(active?.ma5)}
+            {legendPercent(active?.ma5)}
           </span>
           <span className="legend">
             <i className="legend-line ma10" />
             MA10
             <span className="legend-value">{legendValue(active?.ma10)}</span>
             {legendArrow(active?.ma10)}
+            {legendPercent(active?.ma10)}
           </span>
           <span className="legend">
             <i className="legend-line t30" />
             T30
             <span className="legend-value">{legendValue(active?.t30)}</span>
             {legendArrow(active?.t30)}
+            {legendPercent(active?.t30)}
           </span>
           <span className="legend">
             <i className="legend-line t70" />
             T70
             <span className="legend-value">{legendValue(active?.t70)}</span>
             {legendArrow(active?.t70)}
+            {legendPercent(active?.t70)}
           </span>
         </span>
       </div>
@@ -229,27 +282,28 @@ export const DailyKChart = memo(function DailyKChart({
             aria-label={`${name}最近90个交易日K线`}
             className="detail-chart-svg"
           >
-            {tickValues.map((value, index) => {
-              const y = yFor(value);
-              return (
-                <g key={`${value}-${index}`}>
-                  <line
-                    x1="0"
-                    x2={geometry.chartWidth}
-                    y1={y}
-                    y2={y}
-                    className="detail-grid-line"
-                  />
-                  <text
-                    x={geometry.chartWidth + 9}
-                    y={y + 3}
-                    className="detail-axis-label"
-                  >
-                    {formatValue(value)}
-                  </text>
-                </g>
-              );
-            })}
+            {axisLayout.map(({ label, y }) => (
+              <line
+                key={`grid-${label.key}`}
+                x1="0"
+                x2={geometry.chartWidth}
+                y1={y}
+                y2={y}
+                className="detail-grid-line"
+              />
+            ))}
+
+            {axisLayout.map(({ label, centerY }) => (
+              <text
+                key={`label-${label.key}`}
+                x={width - 1}
+                y={centerY + 3}
+                textAnchor="end"
+                className={`detail-axis-label${label.primary ? " is-primary" : ""}`}
+              >
+                {label.text}
+              </text>
+            ))}
 
             {candleNodes}
 

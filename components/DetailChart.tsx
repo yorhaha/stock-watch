@@ -3,14 +3,18 @@
 import { useId, useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useElementWidth } from "@/hooks/useElementWidth";
 import {
+  axisWidthFor,
+  layoutAxisLabelCenters,
   nearestPointIndex,
   priceDomain,
   scaleX,
   scaleY,
   toSeries,
+  type AxisLabel,
 } from "@/lib/chart";
 import {
   formatIndexPrice,
+  formatPercent,
   formatPrice,
   formatVolume,
   marketProfileFor,
@@ -26,6 +30,10 @@ interface DetailChartProps {
   kind?: "stock" | "index";
 }
 
+function formatAxisValue(value: number, kind: "stock" | "index", code?: string): string {
+  return kind === "index" ? formatIndexPrice(value) : formatPrice(value, code);
+}
+
 export function DetailChart({ trend, quote, name, code, kind = "stock" }: DetailChartProps) {
   const [containerRef, width] = useElementWidth<HTMLDivElement>();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
@@ -34,13 +42,64 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
 
   const series = useMemo(() => toSeries(trend, quote?.price), [trend, quote?.price]);
   const profile = marketProfileFor(trend);
+
+  // The right axis carries only three levels: previous close, session high and
+  // session low. They double as the chart's horizontal references.
+  const axisLabels = useMemo<AxisLabel[]>(() => {
+    if (series.length === 0) return [];
+    const prices = series
+      .map((point) => point.price)
+      .filter((value) => Number.isFinite(value) && value > 0);
+    if (prices.length === 0) return [];
+    const preClose = trend?.preClose;
+    const high = Math.max(...prices);
+    const low = Math.min(...prices);
+    const labels: AxisLabel[] = [];
+    const seen = new Set<string>();
+    const add = (label: AxisLabel) => {
+      if (seen.has(label.text)) return;
+      seen.add(label.text);
+      labels.push(label);
+    };
+    const changeOf = (value: number) =>
+      preClose != null && preClose > 0 ? ((value - preClose) / preClose) * 100 : null;
+    const changeLabel = (value: number) => {
+      const change = changeOf(value);
+      return change == null ? undefined : formatPercent(change);
+    };
+
+    if (preClose != null && preClose > 0) {
+      add({
+        key: "preclose",
+        value: preClose,
+        text: formatAxisValue(preClose, kind, code),
+        tone: "flat",
+      });
+    }
+    add({
+      key: "high",
+      value: high,
+      text: formatAxisValue(high, kind, code),
+      sub: changeLabel(high),
+      tone: toneOf(preClose != null ? high - preClose : 0),
+    });
+    add({
+      key: "low",
+      value: low,
+      text: formatAxisValue(low, kind, code),
+      sub: changeLabel(low),
+      tone: toneOf(preClose != null ? low - preClose : 0),
+    });
+    return labels;
+  }, [series, trend?.preClose, kind, code]);
+  const axisWidth = useMemo(() => axisWidthFor(axisLabels), [axisLabels]);
+
   const geometry = useMemo(() => {
-    const right = width > 0 && width < 440 ? 48 : 60;
     const top = 14;
     const priceHeight = 152;
     const volumeGap = 12;
     const volumeHeight = 42;
-    const chartWidth = Math.max(40, width - right);
+    const chartWidth = Math.max(40, width - axisWidth);
     const volumeTop = top + priceHeight + volumeGap;
     const values = series.flatMap((point) =>
       point.average == null ? [point.price] : [point.price, point.average],
@@ -53,7 +112,6 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
     const plotBottom = hasVolume ? volumeTop + volumeHeight : top + priceHeight;
     const height = plotBottom + 26;
     return {
-      right,
       top,
       priceHeight,
       volumeGap,
@@ -66,7 +124,24 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
       domain,
       maxVolume,
     };
-  }, [series, trend?.preClose, width]);
+  }, [series, trend?.preClose, width, axisWidth]);
+
+  const axisLayout = useMemo(() => {
+    const boxes = axisLabels.map((label) => ({
+      y: scaleY(label.value, geometry.domain, geometry.priceHeight, geometry.top),
+      height: label.sub ? 20 : 12,
+    }));
+    const centers = layoutAxisLabelCenters(
+      boxes,
+      geometry.top,
+      geometry.height - 4,
+    );
+    return axisLabels.map((label, index) => ({
+      label,
+      y: boxes[index]?.y ?? geometry.top,
+      centerY: centers[index] ?? boxes[index]?.y ?? geometry.top,
+    }));
+  }, [axisLabels, geometry]);
 
   const yFor = (value: number) =>
     scaleY(value, geometry.domain, geometry.priceHeight, geometry.top);
@@ -105,7 +180,6 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
   const first = series[0];
   const last = series[series.length - 1];
   const tone = first && last ? toneOf(last.price - (trend?.preClose ?? first.price)) : "flat";
-  const preCloseY = trend?.preClose ? yFor(trend.preClose) : null;
 
   const volumeBarWidth = Math.max(
     1,
@@ -198,14 +272,7 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
     setHoverIndex(nearestPointIndex(series, minute));
   };
 
-  const tickValues = [0, 1, 2, 3].map(
-    (index) =>
-      geometry.domain.max -
-      ((geometry.domain.max - geometry.domain.min) / 3) * index,
-  );
-
-  const formatValue = (value: number) =>
-    kind === "index" ? formatIndexPrice(value) : formatPrice(value, code);
+  const formatValue = (value: number) => formatAxisValue(value, kind, code);
   const timeLabel = hovered?.time
     ? hovered.time.includes(" ")
       ? hovered.time.split(" ")[1].slice(0, 5)
@@ -231,27 +298,18 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
               </linearGradient>
             </defs>
 
-            {tickValues.map((value, index) => {
-              const y = yFor(value);
-              return (
-                <g key={`${value}-${index}`}>
-                  <line
-                    x1="0"
-                    x2={geometry.chartWidth}
-                    y1={y}
-                    y2={y}
-                    className="detail-grid-line"
-                  />
-                  <text
-                    x={geometry.chartWidth + 9}
-                    y={y + 3}
-                    className="detail-axis-label"
-                  >
-                    {formatValue(value)}
-                  </text>
-                </g>
-              );
-            })}
+            {axisLayout.map(({ label, y }) =>
+              label.key === "preclose" ? null : (
+                <line
+                  key={`grid-${label.key}`}
+                  x1="0"
+                  x2={geometry.chartWidth}
+                  y1={y}
+                  y2={y}
+                  className="detail-grid-line"
+                />
+              ),
+            )}
 
             <line
               x1={geometry.chartWidth / 2}
@@ -261,15 +319,45 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
               className="detail-center-line"
             />
 
-            {preCloseY != null ? (
-              <line
-                x1="0"
-                x2={geometry.chartWidth}
-                y1={preCloseY}
-                y2={preCloseY}
-                className="detail-baseline"
-              />
-            ) : null}
+            {axisLayout.map(({ label, y }) =>
+              label.key === "preclose" ? (
+                <line
+                  key="baseline"
+                  x1="0"
+                  x2={geometry.chartWidth}
+                  y1={y}
+                  y2={y}
+                  className="detail-baseline"
+                />
+              ) : null,
+            )}
+
+            {axisLayout.map(({ label, centerY }) => {
+              const toneClass =
+                label.tone && label.tone !== "flat" ? ` tone-${label.tone}` : "";
+              return (
+                <g key={`label-${label.key}`}>
+                  <text
+                    x={width - 1}
+                    y={centerY - (label.sub ? 1.5 : -3)}
+                    textAnchor="end"
+                    className={`detail-axis-label${label.primary ? " is-primary" : ""}`}
+                  >
+                    {label.text}
+                  </text>
+                  {label.sub ? (
+                    <text
+                      x={width - 1}
+                      y={centerY + 7.5}
+                      textAnchor="end"
+                      className={`detail-axis-sub${toneClass}`}
+                    >
+                      {label.sub}
+                    </text>
+                  ) : null}
+                </g>
+              );
+            })}
 
             <path d={paths.area} fill={`url(#${gradientId})`} />
             <path
