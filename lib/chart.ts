@@ -73,7 +73,11 @@ export function priceDomainFromRange(
   return { min: min - padding, max: max + padding };
 }
 
-export function priceDomain(values: number[], preClose?: number): Domain {
+export function priceDomain(
+  values: number[],
+  preClose?: number,
+  edgePadding = 0.16,
+): Domain {
   const clean = values.filter((value) => Number.isFinite(value) && value > 0);
   if (clean.length === 0) {
     const fallback = preClose && preClose > 0 ? preClose : 1;
@@ -82,6 +86,7 @@ export function priceDomain(values: number[], preClose?: number): Domain {
   return priceDomainFromRange(
     { min: Math.min(...clean), max: Math.max(...clean) },
     preClose,
+    edgePadding,
   );
 }
 

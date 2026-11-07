@@ -96,21 +96,23 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
 
   const geometry = useMemo(() => {
     const top = 14;
-    const priceHeight = 152;
-    const volumeGap = 12;
+    const volumeGap = 10;
     const volumeHeight = 42;
     const chartWidth = Math.max(40, width - axisWidth);
-    const volumeTop = top + priceHeight + volumeGap;
     const values = series.flatMap((point) =>
       point.average == null ? [point.price] : [point.price, point.average],
     );
     if (trend?.preClose) values.push(trend.preClose);
-    const domain = priceDomain(values, trend?.preClose);
+    const domain = priceDomain(values, trend?.preClose, 0.08);
     const volumes = series.map((point) => point.volume ?? 0);
     const maxVolume = Math.max(...volumes, 1);
     const hasVolume = volumes.some((value) => value > 0);
+    // Without a volume strip, the price panel absorbs the released height so
+    // both detail charts keep the same overall footprint.
+    const priceHeight = hasVolume ? 160 : 212;
+    const volumeTop = top + priceHeight + volumeGap;
     const plotBottom = hasVolume ? volumeTop + volumeHeight : top + priceHeight;
-    const height = plotBottom + 26;
+    const height = plotBottom + 20;
     return {
       top,
       priceHeight,

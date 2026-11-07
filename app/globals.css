@@ -1135,7 +1135,7 @@ a {
 .detail-chart {
   position: relative;
   width: 100%;
-  min-height: 248px;
+  min-height: 246px;
 }
 
 .detail-chart-svg {
@@ -1351,7 +1351,7 @@ a {
 
 .detail-chart-placeholder {
   display: flex;
-  height: 248px;
+  height: 246px;
   align-items: center;
   justify-content: center;
   border: 1px dashed var(--line);
@@ -2716,14 +2716,6 @@ a {
   .detail-chart-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 14px;
-  }
-
-  .detail-chart {
-    min-height: 232px;
-  }
-
-  .detail-chart-placeholder {
-    height: 232px;
   }
 
   .dialog-backdrop {

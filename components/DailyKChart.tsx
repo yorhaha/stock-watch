@@ -78,12 +78,12 @@ export const DailyKChart = memo(function DailyKChart({
 
   const geometry = useMemo(() => {
     const top = 14;
-    const priceHeight = 152;
-    const volumeGap = 12;
+    const priceHeight = 160;
+    const volumeGap = 10;
     const volumeHeight = 42;
     const chartWidth = Math.max(40, width - axisWidth);
     const volumeTop = top + priceHeight + volumeGap;
-    const height = volumeTop + volumeHeight + 26;
+    const height = volumeTop + volumeHeight + 20;
     const values: number[] = [];
     for (const point of points) {
       values.push(point.high, point.low);
@@ -91,7 +91,7 @@ export const DailyKChart = memo(function DailyKChart({
         if (value != null && Number.isFinite(value)) values.push(value);
       }
     }
-    const domain = priceDomain(values);
+    const domain = priceDomain(values, undefined, 0.08);
     const maxVolume = Math.max(...points.map((point) => point.volume), 1);
     const slot = chartWidth / Math.max(points.length, 1);
     return {
@@ -201,7 +201,7 @@ export const DailyKChart = memo(function DailyKChart({
     value == null || !Number.isFinite(value) ? "—" : formatValue(value);
   const legendArrow = (value: number | null | undefined) => {
     if (active == null || value == null || !Number.isFinite(value)) return null;
-    const up = active.close >= value;
+    const up = value >= active.close;
     return (
       <span className={`legend-arrow ${up ? "is-up" : "is-down"}`}>
         {up ? "↑" : "↓"}
