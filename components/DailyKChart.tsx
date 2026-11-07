@@ -19,6 +19,7 @@ interface DailyKChartProps {
   name: string;
   code?: string;
   kind?: "stock" | "index";
+  compact?: boolean;
 }
 
 function formatAxisValue(value: number, kind: "stock" | "index", code?: string): string {
@@ -45,6 +46,7 @@ export const DailyKChart = memo(function DailyKChart({
   name,
   code,
   kind = "stock",
+  compact = false,
 }: DailyKChartProps) {
   const [containerRef, width] = useElementWidth<HTMLDivElement>();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
@@ -78,7 +80,7 @@ export const DailyKChart = memo(function DailyKChart({
 
   const geometry = useMemo(() => {
     const top = 14;
-    const priceHeight = 160;
+    const priceHeight = compact ? 154 : 160;
     const volumeGap = 10;
     const volumeHeight = 42;
     const chartWidth = Math.max(40, width - axisWidth);
@@ -106,7 +108,7 @@ export const DailyKChart = memo(function DailyKChart({
       maxVolume,
       slot,
     };
-  }, [points, width, axisWidth]);
+  }, [points, width, axisWidth, compact]);
 
   const axisLayout = useMemo(() => {
     const boxes = axisLabels.map((label) => ({

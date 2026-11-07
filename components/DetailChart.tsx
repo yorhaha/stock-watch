@@ -28,13 +28,21 @@ interface DetailChartProps {
   name: string;
   code?: string;
   kind?: "stock" | "index";
+  compact?: boolean;
 }
 
 function formatAxisValue(value: number, kind: "stock" | "index", code?: string): string {
   return kind === "index" ? formatIndexPrice(value) : formatPrice(value, code);
 }
 
-export function DetailChart({ trend, quote, name, code, kind = "stock" }: DetailChartProps) {
+export function DetailChart({
+  trend,
+  quote,
+  name,
+  code,
+  kind = "stock",
+  compact = false,
+}: DetailChartProps) {
   const [containerRef, width] = useElementWidth<HTMLDivElement>();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const rawId = useId();
@@ -109,7 +117,7 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
     const hasVolume = volumes.some((value) => value > 0);
     // Without a volume strip, the price panel absorbs the released height so
     // both detail charts keep the same overall footprint.
-    const priceHeight = hasVolume ? 160 : 212;
+    const priceHeight = (hasVolume ? 160 : 212) - (compact ? 6 : 0);
     const volumeTop = top + priceHeight + volumeGap;
     const plotBottom = hasVolume ? volumeTop + volumeHeight : top + priceHeight;
     const height = plotBottom + 20;
@@ -126,7 +134,7 @@ export function DetailChart({ trend, quote, name, code, kind = "stock" }: Detail
       domain,
       maxVolume,
     };
-  }, [series, trend?.preClose, width, axisWidth]);
+  }, [series, trend?.preClose, width, axisWidth, compact]);
 
   const axisLayout = useMemo(() => {
     const boxes = axisLabels.map((label) => ({

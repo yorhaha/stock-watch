@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef } from "react";
 import { useDividendYield } from "@/hooks/useDividendYield";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   formatAmount,
   formatDelta,
@@ -51,6 +52,7 @@ export function DetailSheet({
   const code = quote?.code || instrument.code;
   const tone = toneOf(quote?.pct);
   const isIndex = kind === "index";
+  const compactCharts = useMediaQuery("(max-width: 620px)");
   const dividendYield = useDividendYield(
     instrument.secid,
     quote?.price,
@@ -170,10 +172,23 @@ export function DetailSheet({
                   ) : null}
                 </span>
               </div>
-              <DetailChart trend={trend} quote={quote} name={name} code={code} kind={kind} />
+              <DetailChart
+                trend={trend}
+                quote={quote}
+                name={name}
+                code={code}
+                kind={kind}
+                compact={compactCharts}
+              />
             </section>
             <section className="detail-panel">
-              <DailyKChart secid={instrument.secid} name={name} code={code} kind={kind} />
+              <DailyKChart
+                secid={instrument.secid}
+                name={name}
+                code={code}
+                kind={kind}
+                compact={compactCharts}
+              />
             </section>
           </div>
 

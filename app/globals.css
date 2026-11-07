@@ -2651,7 +2651,7 @@ a {
 
   .detail-sheet {
     width: 100%;
-    max-height: 88vh;
+    max-height: calc(88vh - 10px);
     border-radius: 0 0 var(--radius-xl) var(--radius-xl);
     animation: sheetIn 230ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
@@ -2716,6 +2716,14 @@ a {
   .detail-chart-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 14px;
+  }
+
+  .detail-chart {
+    min-height: 240px;
+  }
+
+  .detail-chart-placeholder {
+    height: 240px;
   }
 
   .dialog-backdrop {
